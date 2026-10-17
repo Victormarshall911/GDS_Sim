@@ -470,22 +470,36 @@ export class SqliteDataStore implements DataStore {
 
   searchHotels(cityCode: string): HotelRecord[] {
     try {
+      const code = cityCode.toUpperCase();
+      const codes = code === 'LON' ? ['LON', 'LHR'] : [code];
+      const placeholders = codes.map(() => '?').join(',');
       return this.db
-        .prepare('SELECT * FROM hotels WHERE city_code = ? ORDER BY rate_ngn ASC')
-        .all(cityCode.toUpperCase()) as HotelRecord[];
+        .prepare(`SELECT * FROM hotels WHERE city_code IN (${placeholders}) ORDER BY rate_ngn ASC`)
+        .all(...codes) as HotelRecord[];
     } catch {
       return [];
     }
   }
 
+  getHotels(cityCode: string): HotelRecord[] {
+    return this.searchHotels(cityCode);
+  }
+
   searchCars(cityCode: string): CarLocationRecord[] {
     try {
+      const code = cityCode.toUpperCase();
+      const codes = code === 'LON' ? ['LON', 'LHR'] : [code];
+      const placeholders = codes.map(() => '?').join(',');
       return this.db
-        .prepare('SELECT * FROM car_locations WHERE city_code = ? ORDER BY daily_rate_ngn ASC')
-        .all(cityCode.toUpperCase()) as CarLocationRecord[];
+        .prepare(`SELECT * FROM car_locations WHERE city_code IN (${placeholders}) ORDER BY daily_rate_ngn ASC`)
+        .all(...codes) as CarLocationRecord[];
     } catch {
       return [];
     }
+  }
+
+  getCarLocations(cityCode: string): CarLocationRecord[] {
+    return this.searchCars(cityCode);
   }
 
   saveETicket(ticket: ETicketRecord): void {

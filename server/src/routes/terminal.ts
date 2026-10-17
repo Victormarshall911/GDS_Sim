@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { executeCommand, createInitialSessionState } from '../command-engine/engine';
-import { DEFAULT_AGENT } from '../command-engine/command-config';
+import { DEFAULT_AGENT, AMADEUS_CONFIG } from '../command-engine/command-config';
 import type { SessionState, DataStore } from '../command-engine/types';
 
 export function createTerminalRouter(
@@ -45,18 +45,47 @@ export function createTerminalRouter(
     const { sessionId, state } = getOrCreateSession(req, res);
     const input = (req.body?.input as string | undefined) ?? '';
 
-    const result = executeCommand(state, input, store, sessionId);
+    let result = executeCommand(state, input, store, sessionId);
+
+    // If dialect switched, adjust agent ID if still on default agent
+    if (result.newState.dialect === 'amadeus' && state.dialect === 'sabre') {
+      if (result.newState.agentId === DEFAULT_AGENT.agentId) {
+        result = {
+          ...result,
+          newState: {
+            ...result.newState,
+            agentId: AMADEUS_CONFIG.defaultAgent.agentId,
+          },
+        };
+      }
+    } else if (result.newState.dialect === 'sabre' && state.dialect === 'amadeus') {
+      if (result.newState.agentId === AMADEUS_CONFIG.defaultAgent.agentId) {
+        result = {
+          ...result,
+          newState: {
+            ...result.newState,
+            agentId: DEFAULT_AGENT.agentId,
+          },
+        };
+      }
+    }
+
     sessions.set(sessionId, result.newState);
     if (store.saveSession) {
       store.saveSession(sessionId, result.newState);
     }
+
+    const currentPcc =
+      result.newState.dialect === 'amadeus'
+        ? AMADEUS_CONFIG.defaultAgent.officeId
+        : DEFAULT_AGENT.pcc;
 
     res.json({
       output: result.output,
       signedIn: result.newState.signedIn,
       agentId: result.newState.agentId,
       dialect: result.newState.dialect,
-      pcc: DEFAULT_AGENT.pcc,
+      pcc: currentPcc,
       currentPnr: result.newState.currentPnr,
       hasWorkingPnr: !!result.newState.workingPnr,
       pnrSummary: result.newState.workingPnr
@@ -74,12 +103,17 @@ export function createTerminalRouter(
   // GET /api/session
   router.get('/session', (req: Request, res: Response) => {
     const { state } = getOrCreateSession(req, res);
+    const currentPcc =
+      state.dialect === 'amadeus'
+        ? AMADEUS_CONFIG.defaultAgent.officeId
+        : DEFAULT_AGENT.pcc;
+
     res.json({
       output: '',
       signedIn: state.signedIn,
       agentId: state.agentId,
       dialect: state.dialect,
-      pcc: DEFAULT_AGENT.pcc,
+      pcc: currentPcc,
       currentPnr: state.currentPnr,
       hasWorkingPnr: !!state.workingPnr,
     });
@@ -87,18 +121,23 @@ export function createTerminalRouter(
 
   // POST /api/session/reset
   router.post('/session/reset', (req: Request, res: Response) => {
-    const { sessionId } = getOrCreateSession(req, res);
-    const cleanState = createInitialSessionState('sabre', true);
+    const { sessionId, state } = getOrCreateSession(req, res);
+    const cleanState = createInitialSessionState(state.dialect, true);
     sessions.set(sessionId, cleanState);
     if (store.saveSession) {
       store.saveSession(sessionId, cleanState);
     }
+    const currentPcc =
+      cleanState.dialect === 'amadeus'
+        ? AMADEUS_CONFIG.defaultAgent.officeId
+        : DEFAULT_AGENT.pcc;
+
     res.json({
       output: 'SESSION RESET - WORK AREA CLEARED',
       signedIn: true,
       agentId: cleanState.agentId,
-      dialect: 'sabre',
-      pcc: DEFAULT_AGENT.pcc,
+      dialect: cleanState.dialect,
+      pcc: currentPcc,
       currentPnr: null,
       hasWorkingPnr: false,
     });

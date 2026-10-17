@@ -3,8 +3,14 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { Terminal } from '../Terminal';
 
-function TerminalHarness(props: { initialValue?: string; history?: string[]; uppercaseMode?: boolean }) {
+function TerminalHarness(props: {
+  initialValue?: string;
+  history?: string[];
+  uppercaseMode?: boolean;
+  dialect?: 'sabre' | 'amadeus';
+}) {
   const [val, setVal] = useState(props.initialValue ?? '');
+  console.log('TerminalHarness RENDER val:', val);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const history = props.history ?? ['1LOSLHR15NOV', '01Y1', '-DOE/JOHN MR'];
 
@@ -35,6 +41,7 @@ function TerminalHarness(props: { initialValue?: string; history?: string[]; upp
       onArrowUp={handleArrowUp}
       onArrowDown={handleArrowDown}
       uppercaseMode={props.uppercaseMode ?? true}
+      dialect={props.dialect ?? 'sabre'}
     />
   );
 }
@@ -145,5 +152,57 @@ describe('Terminal Inline Cursor & Caret Behavior', () => {
     expect(screen.getByTestId('terminal-caret').textContent).toBe(' ');
     expect(screen.getByTestId('text-after').textContent).toBe('');
     expect(input.selectionStart).toBe(4);
+  });
+
+  it('renders stacking button with yen symbol in Sabre mode and inserts it at caret on click', () => {
+    render(<TerminalHarness initialValue="1LOSLHR15NOV" dialect="sabre" />);
+
+    const btn = screen.getByTestId('stack-char-btn');
+    expect(btn.textContent).toBe('¥');
+
+    // Click button to insert ¥ at the end of text
+    act(() => {
+      fireEvent.click(btn);
+    });
+
+    expect(screen.getByTestId('text-before').textContent).toBe('1LOSLHR15NOV¥');
+  });
+
+  it('renders stacking button with plus symbol in Amadeus mode and inserts it at caret on click', () => {
+    render(<TerminalHarness initialValue="AN15MARBOMDEL" dialect="amadeus" />);
+
+    const btn = screen.getByTestId('stack-char-btn');
+    expect(btn.textContent).toBe('+');
+
+    // Click button to insert + at the end of text
+    act(() => {
+      fireEvent.click(btn);
+    });
+
+    expect(screen.getByTestId('text-before').textContent).toBe('AN15MARBOMDEL+');
+  });
+
+  it('inserts yen symbol when backtick is pressed in Sabre mode', () => {
+    render(<TerminalHarness initialValue="1LOSLHR15NOV" dialect="sabre" />);
+
+    const input = screen.getByTestId('terminal-command-input') as HTMLInputElement;
+
+    act(() => {
+      fireEvent.keyDown(input, { key: '`' });
+    });
+
+    expect(screen.getByTestId('text-before').textContent).toBe('1LOSLHR15NOV¥');
+  });
+
+  it('does not insert yen symbol on backtick in Amadeus mode', () => {
+    render(<TerminalHarness initialValue="AN15MARBOMDEL" dialect="amadeus" />);
+
+    const input = screen.getByTestId('terminal-command-input') as HTMLInputElement;
+
+    act(() => {
+      fireEvent.keyDown(input, { key: '`' });
+    });
+
+    expect(screen.getByTestId('text-before').textContent).toBe('AN15MARBOMDEL');
   });
 });

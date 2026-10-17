@@ -10,6 +10,7 @@ interface TerminalProps {
   onArrowUp: () => void;
   onArrowDown: () => void;
   uppercaseMode?: boolean;
+  dialect?: 'sabre' | 'amadeus';
 }
 
 export const Terminal: React.FC<TerminalProps> = ({
@@ -20,7 +21,9 @@ export const Terminal: React.FC<TerminalProps> = ({
   onArrowUp,
   onArrowDown,
   uppercaseMode = true,
+  dialect = 'sabre',
 }) => {
+  const delimiter = dialect === 'amadeus' ? '+' : '¥';
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [caretPos, setCaretPos] = useState<number>(inputValue.length);
@@ -58,6 +61,7 @@ export const Terminal: React.FC<TerminalProps> = ({
   const syncCaretFromInput = useCallback(() => {
     if (inputRef.current) {
       const pos = inputRef.current.selectionStart ?? inputRef.current.value.length;
+      console.log('syncCaretFromInput called, pos:', pos);
       setCaretPos(pos);
       resetBlinkTimer();
     }
@@ -77,6 +81,32 @@ export const Terminal: React.FC<TerminalProps> = ({
       setCaretPos(inputValue.length);
     }
   }, [inputValue, caretPos, resetBlinkTimer]);
+
+  // Insert a character (e.g. stacking delimiter) at the current caret position
+  const insertCharacterAtCaret = useCallback(
+    (char: string) => {
+      resetBlinkTimer();
+      const safeCaret = Math.min(Math.max(0, caretPos), inputValue.length);
+      const newText = inputValue.slice(0, safeCaret) + char + inputValue.slice(safeCaret);
+      const newPos = safeCaret + char.length;
+
+      if (inputRef.current) {
+        inputRef.current.value = newText;
+        inputRef.current.setSelectionRange(newPos, newPos);
+      }
+
+      onInputChange(newText);
+      setCaretPos(newPos);
+
+      requestAnimationFrame(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          inputRef.current.setSelectionRange(newPos, newPos);
+        }
+      });
+    },
+    [caretPos, inputValue, onInputChange, resetBlinkTimer]
+  );
 
   // Keep input focused when clicking anywhere in terminal
   const handleTerminalClick = (e: React.MouseEvent) => {
@@ -110,6 +140,21 @@ export const Terminal: React.FC<TerminalProps> = ({
       return;
     }
 
+    console.log('KEY DOWN:', { key: e.key, code: e.code, dialect });
+    // Backtick shortcut inserts ¥ for Sabre only
+    if ((e.key === '`' || e.key === 'Backquote' || e.code === 'Backquote') && dialect !== 'amadeus') {
+      console.log('TRIGGERED BACKTICK INSERTION');
+      e.preventDefault();
+      insertCharacterAtCaret('¥');
+      return;
+    }
+
+    // Prevent tab from navigating away from the terminal editor
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      return;
+    }
+
     // For Left, Right, Home, End, Backspace, Delete, Ctrl+Arrow, etc.:
     // Let browser perform default native action on input, then update caret position.
     requestAnimationFrame(syncCaretFromInput);
@@ -130,6 +175,11 @@ export const Terminal: React.FC<TerminalProps> = ({
         inputRef.current.setSelectionRange(pos, pos);
       }
     });
+  };
+
+  const handlePaste = () => {
+    resetBlinkTimer();
+    requestAnimationFrame(syncCaretFromInput);
   };
 
   const handleKeyUp = () => {
@@ -153,6 +203,7 @@ export const Terminal: React.FC<TerminalProps> = ({
   const textBefore = inputValue.slice(0, safeCaret);
   const caretChar = inputValue[safeCaret] !== undefined ? inputValue[safeCaret] : ' ';
   const textAfter = inputValue.slice(safeCaret + 1);
+  console.log('Terminal RENDER:', { caretPos, inputValue, safeCaret, textBefore });
 
   return (
     <div
@@ -169,6 +220,20 @@ export const Terminal: React.FC<TerminalProps> = ({
 
       {/* Active Input Line - Inline flow */}
       <div className="active-input-row" id="terminal-active-line">
+        <button
+          type="button"
+          className="stack-char-btn"
+          id="stack-char-btn"
+          data-testid="stack-char-btn"
+          title={`Insert stacking character '${delimiter}' at cursor`}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            insertCharacterAtCaret(delimiter);
+          }}
+        >
+          {delimiter}
+        </button>
         <span className="input-prompt-symbol">&gt;&nbsp;</span>
         <div className="terminal-editor-container">
           <input
@@ -182,6 +247,7 @@ export const Terminal: React.FC<TerminalProps> = ({
             onClick={handleClick}
             onSelect={handleSelect}
             onInput={handleInput}
+            onPaste={handlePaste}
             autoFocus
             spellCheck={false}
             autoComplete="off"
@@ -189,7 +255,7 @@ export const Terminal: React.FC<TerminalProps> = ({
             autoCapitalize="characters"
             id="terminal-command-input"
             data-testid="terminal-command-input"
-            aria-label="Sabre terminal command input"
+            aria-label="Terminal command input"
           />
           <div className="terminal-visible-line" aria-hidden="true">
             <span className="text-before" data-testid="text-before">{textBefore}</span>

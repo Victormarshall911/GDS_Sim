@@ -35,8 +35,8 @@ const DAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'] as const;
 
 /** Format a Date as Sabre-style DDMMM (e.g. "15NOV") */
 export function formatDateSabre(date: Date): string {
-  const day = date.getDate().toString().padStart(2, '0');
-  return `${day}${MONTHS[date.getMonth()]}`;
+  const day = date.getUTCDate().toString().padStart(2, '0');
+  return `${day}${MONTHS[date.getUTCMonth()]}`;
 }
 
 /** Format a Date as DDMMMYYYY (e.g. "15NOV2026") */
@@ -91,8 +91,10 @@ export function parseGdsDate(dateStr: string, referenceDate: Date = new Date()):
   const monthMap: Record<string, number> = {};
   MONTHS.forEach((m, i) => { monthMap[m] = i; });
 
-  const ref = new Date(referenceDate);
-  ref.setHours(0, 0, 0, 0);
+  const refYear = referenceDate.getUTCFullYear();
+  const refMonth = referenceDate.getUTCMonth();
+  const refDay = referenceDate.getUTCDate();
+  const refMidnight = Date.UTC(refYear, refMonth, refDay);
 
   // Format 1: 19OCT26 or 19OCT2026
   const fullMatch = clean.match(/^(\d{1,2})([A-Z]{3})(\d{2}|\d{4})$/);
@@ -102,7 +104,7 @@ export function parseGdsDate(dateStr: string, referenceDate: Date = new Date()):
     let year = parseInt(fullMatch[3], 10);
     if (year < 100) year = 2000 + year;
     if (month === undefined || day < 1 || day > 31) return null;
-    return new Date(year, month, day);
+    return new Date(Date.UTC(year, month, day));
   }
 
   // Format 2: 19OCT
@@ -111,10 +113,10 @@ export function parseGdsDate(dateStr: string, referenceDate: Date = new Date()):
     const day = parseInt(monthMatch[1], 10);
     const month = monthMap[monthMatch[2]];
     if (month === undefined || day < 1 || day > 31) return null;
-    let year = ref.getFullYear();
-    let candidate = new Date(year, month, day);
-    if (candidate < ref) {
-      candidate = new Date(year + 1, month, day);
+    let year = refYear;
+    let candidate = new Date(Date.UTC(year, month, day));
+    if (candidate.getTime() < refMidnight) {
+      candidate = new Date(Date.UTC(year + 1, month, day));
     }
     return candidate;
   }
@@ -124,11 +126,11 @@ export function parseGdsDate(dateStr: string, referenceDate: Date = new Date()):
   if (dayMatch) {
     const day = parseInt(dayMatch[1], 10);
     if (day < 1 || day > 31) return null;
-    let year = ref.getFullYear();
-    let month = ref.getMonth();
-    let candidate = new Date(year, month, day);
-    if (candidate < ref) {
-      candidate = new Date(year, month + 1, day);
+    let year = refYear;
+    let month = refMonth;
+    let candidate = new Date(Date.UTC(year, month, day));
+    if (candidate.getTime() < refMidnight) {
+      candidate = new Date(Date.UTC(year, month + 1, day));
     }
     return candidate;
   }

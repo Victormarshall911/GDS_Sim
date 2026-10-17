@@ -9,6 +9,7 @@ export interface AmadeusAvailQuery {
   destination: string;
   returnDateStr?: string;
   modifiersStr?: string;
+  timeStr?: string;
 }
 
 /**
@@ -17,6 +18,8 @@ export interface AmadeusAvailQuery {
  * "AN 19OCT LOS ABV /A P4"
  * "AN19LOSABV"
  * "AN15MARBOMDEL*22MAR"
+ * "AD15MARBOMDEL0800"
+ * "AA15MARDELLHR1700"
  */
 export function parseAmadeusAvailEntry(input: string): AmadeusAvailQuery | null {
   const clean = input.trim().toUpperCase();
@@ -45,8 +48,22 @@ export function parseAmadeusAvailEntry(input: string): AmadeusAvailQuery | null 
   // Remove spaces within the route/date part: e.g. "19OCT LOS ABV" -> "19OCTLOSABV"
   const compact = outboundPart.replace(/\s+/g, '');
 
-  // 1. Date + Origin + Dest: e.g. "19OCT26LOSABV" or "19OCTLOSABV"
-  let m = compact.match(/^(\d{1,2}[A-Z]{3}(?:\d{2}|\d{4})?)([A-Z]{3})([A-Z]{3})$/);
+  // 1. Date + Origin + Dest + Time: e.g. "15MARBOMDEL0800"
+  let m = compact.match(/^(\d{1,2}[A-Z]{3}(?:\d{2}|\d{4})?)([A-Z]{3})([A-Z]{3})(\d{4})$/);
+  if (m) {
+    return {
+      cmdType,
+      dateStr: m[1],
+      origin: m[2],
+      destination: m[3],
+      timeStr: m[4],
+      returnDateStr,
+      modifiersStr,
+    };
+  }
+
+  // 2. Date + Origin + Dest: e.g. "19OCT26LOSABV" or "19OCTLOSABV"
+  m = compact.match(/^(\d{1,2}[A-Z]{3}(?:\d{2}|\d{4})?)([A-Z]{3})([A-Z]{3})$/);
   if (m) {
     return {
       cmdType,
@@ -58,7 +75,7 @@ export function parseAmadeusAvailEntry(input: string): AmadeusAvailQuery | null 
     };
   }
 
-  // 2. Bare day + Origin + Dest: e.g. "19LOSABV"
+  // 3. Bare day + Origin + Dest: e.g. "19LOSABV"
   m = compact.match(/^(\d{1,2})([A-Z]{3})([A-Z]{3})$/);
   if (m) {
     return {
@@ -71,7 +88,7 @@ export function parseAmadeusAvailEntry(input: string): AmadeusAvailQuery | null 
     };
   }
 
-  // 3. No date specified (defaults to today): e.g. "LOSABV"
+  // 4. No date specified (defaults to today): e.g. "LOSABV"
   m = compact.match(/^([A-Z]{3})([A-Z]{3})$/);
   if (m) {
     return {
@@ -87,11 +104,65 @@ export function parseAmadeusAvailEntry(input: string): AmadeusAvailQuery | null 
   return null;
 }
 
+/**
+ * Handle AC (Availability Change)
+ */
+export function handleAmadeusAvailabilityChange(
+  rawInput: string,
+  state: SessionState,
+  store: DataStore
+): CommandResult {
+  if (!state.lastAvailability) {
+    return {
+      output: 'NO ACTIVE AVAILABILITY DISPLAY TO CHANGE',
+      newState: state,
+    };
+  }
+
+  const changeArg = rawInput.trim().toUpperCase().replace(/^AC\s*/, '').trim();
+  const current = state.lastAvailability;
+
+  let newDate = current.date;
+  let newOrigin = current.origin;
+  let newDest = current.destination;
+  let newModifiers = '';
+
+  if (changeArg.startsWith('/')) {
+    // Modifier change: e.g. AC/AP4
+    newModifiers = changeArg;
+  } else if (/^\d{1,2}[A-Z]{3}(?:\d{2})?$/.test(changeArg)) {
+    // Date change: e.g. AC20MAR
+    const parsedD = parseGdsDate(changeArg);
+    if (parsedD) {
+      newDate = parsedD.toISOString().slice(0, 10);
+    }
+  } else if (/^[A-Z]{6}$/.test(changeArg)) {
+    // Route change: e.g. ACLOSABV
+    newOrigin = changeArg.slice(0, 3);
+    newDest = changeArg.slice(3, 6);
+  } else if (/^\d+$/.test(changeArg)) {
+    // Day offset: e.g. AC1
+    const d = new Date(current.date);
+    d.setUTCDate(d.getUTCDate() + parseInt(changeArg, 10));
+    newDate = d.toISOString().slice(0, 10);
+  }
+
+  const [y, m, d] = newDate.split('-').map(Number);
+  const gdsDateStr = formatDateSabre(new Date(Date.UTC(y, m - 1, d)));
+  const newCmd = `AN${gdsDateStr}${newOrigin}${newDest}${newModifiers}`;
+
+  return handleAmadeusAvailability(newCmd, state, store);
+}
+
 export function handleAmadeusAvailability(
   rawInput: string,
   state: SessionState,
   store: DataStore
 ): CommandResult {
+  if (rawInput.trim().toUpperCase().startsWith('AC')) {
+    return handleAmadeusAvailabilityChange(rawInput, state, store);
+  }
+
   const parsed = parseAmadeusAvailEntry(rawInput);
   if (!parsed) {
     return {
@@ -136,8 +207,16 @@ export function handleAmadeusAvailability(
     );
   }
 
+  // Sort by command type
+  if (parsed.cmdType === 'AD') {
+    flights.sort((a, b) => a.departure_time.localeCompare(b.departure_time));
+  } else if (parsed.cmdType === 'AA') {
+    flights.sort((a, b) => a.arrival_time.localeCompare(b.arrival_time));
+  }
+
   const formattedDate = formatDateSabre(travelDateObj);
-  const header = `AN  ${formattedDate}  ${parsed.origin}${parsed.destination}  0000`;
+  const timeDisplay = parsed.timeStr || '0000';
+  const header = `${parsed.cmdType}  ${formattedDate}  ${parsed.origin}${parsed.destination}  ${timeDisplay}`;
 
   if (flights.length === 0) {
     const filterNote = modOpts.airlines?.length
@@ -194,6 +273,42 @@ export function handleAmadeusAvailability(
     });
   });
 
+  // If round trip search (*returnDate)
+  if (parsed.returnDateStr) {
+    const returnDateObj = parseGdsDate(parsed.returnDateStr);
+    if (returnDateObj) {
+      const returnIso = returnDateObj.toISOString().split('T')[0];
+      const returnDow = returnDateObj.getDay() === 0 ? 7 : returnDateObj.getDay();
+      let returnFlights = store.searchFlights(parsed.destination, parsed.origin, returnIso, returnDow);
+      if (modOpts.airlines && modOpts.airlines.length > 0) {
+        returnFlights = returnFlights.filter((f) => modOpts.airlines!.includes(f.airline_code));
+      }
+
+      outputLines.push('');
+      outputLines.push(`RETURN AVAILABILITY: ${formatDateSabre(returnDateObj)} ${parsed.destination}-${parsed.origin}`);
+      returnFlights.forEach((rf, rIdx) => {
+        const rLineNum = lines.length + 1;
+        const rClassStr = rf.classes.map((c) => `${c.code}${c.seats}`).join(' ');
+        outputLines.push(` ${padRight(rLineNum.toString(), 2)}  ${rf.airline_code} ${rf.flight_number}  ${padRight(rClassStr, 25)}  ${rf.origin}${rf.destination}  ${formatTimeDisplay(rf.departure_time)} ${formatTimeDisplay(rf.arrival_time)}  0  ${rf.aircraft}  E`);
+        lines.push({
+          lineNumber: rLineNum,
+          airlineCode: rf.airline_code,
+          flightNumber: rf.flight_number,
+          origin: rf.origin,
+          destination: rf.destination,
+          departureTime: rf.departure_time,
+          arrivalTime: rf.arrival_time,
+          aircraft: rf.aircraft,
+          classes: rf.classes,
+          elapsedTime: '01H15M',
+          stops: 0,
+          travelDate: returnIso,
+          flightId: rf.id,
+        });
+      });
+    }
+  }
+
   outputLines.push('');
 
   return {
@@ -206,6 +321,7 @@ export function handleAmadeusAvailability(
         date: isoDate,
         lines,
       },
+      availabilityPage: 0,
     },
   };
 }

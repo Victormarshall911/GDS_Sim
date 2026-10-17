@@ -96,6 +96,10 @@ export interface SessionState {
   activeQueue?: { queueNumber: number; currentIndex: number } | null;
   seatAssignments?: Record<string, string>;
   lastDisplayContent?: string;
+  availabilityPage?: number;
+  formOfPayment?: string;
+  commission?: string;
+  validatingCarrier?: string;
 }
 
 // ─── Amadeus Records ──────────────────────────────────────────

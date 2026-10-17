@@ -171,21 +171,6 @@ export const SABRE_COMMANDS = {
   },
 } as const;
 
-export const AMADEUS_CONFIG = {
-  delimiter: '+',
-  defaultAgent: {
-    agentId: process.env.DEFAULT_AMADEUS_AGENT_ID || '1234AA/SU',
-    officeId: process.env.DEFAULT_AMADEUS_OFFICE_ID || 'LOS01',
-  },
-  soldSegmentStatus: 'HK', // In Amadeus, sold segments go into working PNR as HK1
-  validationOrder: [
-    { type: 'name', error: 'NEED NAME' },
-    { type: 'itinerary', error: 'NEED ITINERARY' },
-    { type: 'contact', error: 'NEED CONTACT' },
-    { type: 'ticketing', error: 'NEED TICKETING ARRANGEMENT' },
-    { type: 'receivedFrom', error: 'NEED RECEIVED FROM' },
-  ],
-};
 
 export interface ParsedAvailabilityModifiers {
   airlines?: string[];
@@ -277,27 +262,401 @@ export function parseAvailabilityModifiers(modifierString: string): ParsedAvaila
   return result;
 }
 
-// ─── Amadeus Mapping Table ───────────────────────────────────
-export const AMADEUS_COMMAND_MAP: Record<
-  string,
-  { sabre: string; amadeus: string; description: string }
-> = {
-  signIn:         { sabre: 'SI*<ID>',           amadeus: 'JI <ID>',           description: 'Sign in' },
-  signOut:        { sabre: 'SO',                amadeus: 'JO',                description: 'Sign out' },
-  availability:   { sabre: '1LOSLHR15NOV',      amadeus: 'AN15NOVLOSLHR',     description: 'Availability' },
-  sell:           { sabre: '01Y1',              amadeus: 'SS1Y1',             description: 'Sell from availability' },
-  name:           { sabre: '-SMITH/JOHN MR',    amadeus: 'NM1SMITH/JOHN MR',  description: 'Name entry' },
-  phone:          { sabre: '9234-555-1234-A',   amadeus: 'AP 234-555-1234',   description: 'Phone field' },
-  ticketing:      { sabre: '7TAW/',             amadeus: 'TKTL15NOV',         description: 'Ticketing' },
-  receivedFrom:   { sabre: '6SMITH',            amadeus: 'RF SMITH',          description: 'Received from' },
-  endSave:        { sabre: 'E',                 amadeus: 'ER',                description: 'End and save' },
-  endRetrieve:    { sabre: 'ER',                amadeus: 'ET',                description: 'End, save, redisplay' },
-  retrieve:       { sabre: '*ABCDEF',           amadeus: 'RT ABCDEF',         description: 'Retrieve PNR' },
-  cancelAll:      { sabre: 'XI',                amadeus: 'XE ALL',            description: 'Cancel itinerary' },
-  cancelSegment:  { sabre: 'X1',                amadeus: 'XE 1',              description: 'Cancel segment' },
-  ignore:         { sabre: 'I',                 amadeus: 'IG',                description: 'Ignore' },
-  price:          { sabre: 'WP',                amadeus: 'FXP',               description: 'Price itinerary' },
-  encodeCity:     { sabre: 'DAN LAGOS',         amadeus: 'DAN LAGOS',         description: 'Encode city' },
-  decodeAirport:  { sabre: 'DAC LOS',          amadeus: 'DAC LOS',           description: 'Decode airport' },
-  encodeAirline:  { sabre: 'W/*BRITISH',        amadeus: 'DNA BRITISH',       description: 'Encode airline' },
+export const AMADEUS_CONFIG = {
+  delimiter: '+',
+  soldSegmentStatus: 'HK',
+  defaultAgent: {
+    agentId: process.env.AMADEUS_AGENT_ID || '1234AA/SU',
+    officeId: process.env.AMADEUS_OFFICE_ID || 'LOS1A0980',
+    dutyCode: 'SU',
+  },
+  validationOrder: [
+    { field: 'names', message: 'NEED NAME' },
+    { field: 'itinerary', message: 'NEED ITINERARY' },
+    { field: 'contact', message: 'NEED CONTACT' },
+    { field: 'ticketing', message: 'NEED TICKETING ARRANGEMENT' },
+    { field: 'receivedFrom', message: 'NEED RECEIVED FROM' },
+  ],
 };
+
+export const AMADEUS_COMMANDS = {
+  // Session
+  SIGN_IN: {
+    pattern: /^JI(?:\s*(.+))?$/i,
+    description: 'Jump In: Sign in with agent ID',
+    example: 'JI 1234AA/SU',
+  },
+  SIGN_OUT: {
+    pattern: /^JO$/i,
+    description: 'Jump Out: Sign out',
+    example: 'JO',
+  },
+  SESSION_DISPLAY: {
+    pattern: /^JD$/i,
+    description: 'Display Session status',
+    example: 'JD',
+  },
+  HELP: {
+    pattern: /^(?:HELP|HE)(?:\s+(.*))?$/i,
+    description: 'System Help',
+    example: 'HELP or HELP AN',
+  },
+  MOVE_DOWN: {
+    pattern: /^MD$/i,
+    description: 'Move Down / scroll next page',
+    example: 'MD',
+  },
+  MOVE_UP: {
+    pattern: /^MU$/i,
+    description: 'Move Up / scroll previous page',
+    example: 'MU',
+  },
+  MOVE_NEXT_DAY: {
+    pattern: /^MN$/i,
+    description: 'Move Next Day availability',
+    example: 'MN',
+  },
+  MOVE_PREV_DAY: {
+    pattern: /^MY$/i,
+    description: 'Move Yesterday availability',
+    example: 'MY',
+  },
+  MOVE_TOP: {
+    pattern: /^(?:MP|MT)$/i,
+    description: 'Move First Page / Move Top',
+    example: 'MP',
+  },
+
+  // Encode & Decode
+  ENCODE_CITY: {
+    pattern: /^DAN\s*(.+)$/i,
+    description: 'Encode city name to airport code',
+    example: 'DAN MUMBAI',
+  },
+  DECODE_AIRPORT: {
+    pattern: /^DAC\s*([A-Z]{3})$/i,
+    description: 'Decode airport code',
+    example: 'DAC JFK',
+  },
+  AIRLINE_ENCODE_DECODE: {
+    pattern: /^DNA\s*(.+)$/i,
+    description: 'Encode or decode airline name or code',
+    example: 'DNAEK or DNA EMIRATES',
+  },
+  COUNTRY_ENCODE_DECODE: {
+    pattern: /^DC\s*(.+)$/i,
+    description: 'Encode or decode country name or code',
+    example: 'DCINDIA or DCIN',
+  },
+  EQUIPMENT_ENCODE_DECODE: {
+    pattern: /^DNE\s*\/?(.*)$/i,
+    description: 'Encode or decode aircraft equipment',
+    example: 'DNE/320 or DNE/AIRBUS',
+  },
+  CAR_VENDOR_ENCODE_DECODE: {
+    pattern: /^DNC\s*(.+)$/i,
+    description: 'Encode or decode car rental vendor',
+    example: 'DNC HERTZ or DNC ZE',
+  },
+  HOTEL_CHAIN_ENCODE_DECODE: {
+    pattern: /^DNH\s*(.+)$/i,
+    description: 'Encode or decode hotel brand/chain',
+    example: 'DNH HILTON or DNH HL',
+  },
+
+  // Flight Availability & Schedules
+  AVAILABILITY_CHANGE: {
+    pattern: /^AC(?:\s*(.*))?$/i,
+    description: 'Availability change (date, airline, route)',
+    example: 'AC20MAR or AC/AP4',
+  },
+  AVAILABILITY_NEUTRAL: {
+    pattern: /^AN(?:\s*(.*))?$/i,
+    description: 'Neutral availability search',
+    example: 'AN15MARBOMDEL or AN19OCTLOSABV/AP4',
+  },
+  AVAILABILITY_DEP_TIME: {
+    pattern: /^AD(?:\s*(.*))?$/i,
+    description: 'Availability by departure time',
+    example: 'AD15MARBOMDEL0800',
+  },
+  AVAILABILITY_ELAPSED: {
+    pattern: /^AE(?:\s*(.*))?$/i,
+    description: 'Availability by shortest elapsed time',
+    example: 'AE15MARBOMDEL',
+  },
+  AVAILABILITY_ARR_TIME: {
+    pattern: /^AA(?:\s*(.*))?$/i,
+    description: 'Availability by arrival time',
+    example: 'AA15MARDELLHR1700',
+  },
+  SCHEDULE_NEUTRAL: {
+    pattern: /^SN(?:\s*(.*))?$/i,
+    description: 'Schedule neutral display',
+    example: 'SN15MARBOMDEL',
+  },
+  TIMETABLE: {
+    pattern: /^TN(?:\s*(.*))?$/i,
+    description: 'Timetable schedule frequency display',
+    example: 'TN15MARBOMDEL',
+  },
+
+  // Sell
+  SELL_SHORT: {
+    pattern: /^SS\s*(\d{1,2})\s*([A-Z])\s*(\d{1,2})$/i,
+    description: 'Sell segment from availability (seats, class, line)',
+    example: 'SS1Y1',
+  },
+  SELL_LONG: {
+    pattern: /^SS\s*([A-Z\d]{2})\s*(\d{1,4})\s*([A-Z])\s*(\d{1,2}[A-Z]{3}(?:\d{2})?)\s*([A-Z]{3})\s*([A-Z]{3})\s*(\d{1,2})$/i,
+    description: 'Direct sell without availability',
+    example: 'SSAI101Y15MARBOMDEL1',
+  },
+
+  // PNR Creation
+  NAME: {
+    pattern: /^NM\s*(.*)$/i,
+    description: 'Add passenger name (NM1, NM2, CHD, INF)',
+    example: 'NM1SHARMA/RAHUL MR or NM1KAPOOR/ANJALI MISS(CHD/15MAR18)',
+  },
+  PHONE_GENERAL: {
+    pattern: /^AP\s*(.*)$/i,
+    description: 'Add general contact phone number',
+    example: 'APBOM 022-12345678',
+  },
+  PHONE_MOBILE: {
+    pattern: /^APM\s*-(.*)$/i,
+    description: 'Add mobile phone number',
+    example: 'APM-9876543210',
+  },
+  EMAIL: {
+    pattern: /^APE\s*-(.*)$/i,
+    description: 'Add email contact',
+    example: 'APE-TEST@EMAIL.COM',
+  },
+  SR_CTCM: {
+    pattern: /^SR\s*CTCM\s*-(.*)$/i,
+    description: 'Contact Mobile SSR',
+    example: 'SR CTCM-2349165283674',
+  },
+  SR_CTCE: {
+    pattern: /^SR\s*CTCE\s*-(.*)$/i,
+    description: 'Contact Email SSR (// converts to @)',
+    example: 'SR CTCE-NAME//GMAIL.COM',
+  },
+  SSR_GENERAL: {
+    pattern: /^SR\s*(?!CTCM|CTCE)(.*)$/i,
+    description: 'General SSR entry',
+    example: 'SRVGML/P1/S2',
+  },
+  OSI: {
+    pattern: /^OS\s*(.*)$/i,
+    description: 'Other Service Info',
+    example: 'OS AI VIP PAX',
+  },
+  FFN: {
+    pattern: /^FFN\s*([A-Z\d]{2})\s*-(.*)$/i,
+    description: 'Frequent Flyer Number',
+    example: 'FFNAI-1234567890/P1',
+  },
+  TICKETING_OK: {
+    pattern: /^TKOK$/i,
+    description: 'Confirm ticketing arrangement OK',
+    example: 'TKOK',
+  },
+  TICKETING_TIME_LIMIT: {
+    pattern: /^TKTL\s*(.*)$/i,
+    description: 'Ticket time limit',
+    example: 'TKTL20MAR/1800',
+  },
+  RECEIVED_FROM: {
+    pattern: /^RF\s*(.*)$/i,
+    description: 'Received from (mandatory)',
+    example: 'RF RAHUL',
+  },
+
+  // End Transaction & Retrieve
+  END_RETRIEVE: {
+    pattern: /^ER$/i,
+    description: 'End & Retrieve (save and redisplay PNR)',
+    example: 'ER',
+  },
+  END_TRANSACTION: {
+    pattern: /^ET$/i,
+    description: 'End Transaction (save and exit PNR)',
+    example: 'ET',
+  },
+  IGNORE: {
+    pattern: /^IG$/i,
+    description: 'Ignore unsaved changes',
+    example: 'IG',
+  },
+  IGNORE_RETRIEVE: {
+    pattern: /^IR$/i,
+    description: 'Ignore and reload saved PNR',
+    example: 'IR',
+  },
+  RETRIEVE: {
+    pattern: /^RT(?:\s*(.*))?$/i,
+    description: 'Retrieve PNR by record locator',
+    example: 'RT or RTABC123',
+  },
+
+  // Modifications
+  CANCEL_ELEMENT: {
+    pattern: /^XE\s*(.+)$/i,
+    description: 'Cancel PNR element by line number',
+    example: 'XE5 or XE2,4 or XE2-4',
+  },
+  CANCEL_ITINERARY: {
+    pattern: /^XI$/i,
+    description: 'Cancel whole itinerary',
+    example: 'XI',
+  },
+  REBOOK_SEGMENT: {
+    pattern: /^SB\s*(.+)$/i,
+    description: 'Rebook segment class or date',
+    example: 'SBY2 or SB19OCT2',
+  },
+  SPLIT_PNR: {
+    pattern: /^SP\s*(.+)$/i,
+    description: 'Split PNR into a new booking',
+    example: 'SP2,3',
+  },
+
+  // Pricing
+  PRICE_TST: {
+    pattern: /^FXP(?:\s*(.*))?$/i,
+    description: 'Price PNR and store TST',
+    example: 'FXP',
+  },
+  PRICE_INFORMATIVE: {
+    pattern: /^FXX(?:\s*(.*))?$/i,
+    description: 'Price PNR without storing TST',
+    example: 'FXX',
+  },
+  PRICE_BEST_DISPLAY: {
+    pattern: /^FXA(?:\s*(.*))?$/i,
+    description: 'Best pricer: search lower fares',
+    example: 'FXA',
+  },
+  PRICE_BEST_REBOOK: {
+    pattern: /^FXR(?:\s*(.*))?$/i,
+    description: 'Best pricer: rebook lowest fare',
+    example: 'FXR',
+  },
+  FARE_QUOTE_DISPLAY: {
+    pattern: /^FQD\s*(.+)$/i,
+    description: 'Fare Quote Display',
+    example: 'FQDBOMDEL',
+  },
+  FARE_QUOTE_NOTES: {
+    pattern: /^FQN\s*(\d{1,2})$/i,
+    description: 'Fare rules and notes',
+    example: 'FQN1',
+  },
+
+  // Ticketing
+  ISSUE_TICKETS: {
+    pattern: /^TTP$/i,
+    description: 'Issue e-tickets for all TSTs',
+    example: 'TTP',
+  },
+  ISSUE_TICKETS_RT: {
+    pattern: /^TTP\/RT$/i,
+    description: 'Issue e-tickets and retrieve PNR',
+    example: 'TTP/RT',
+  },
+  COMMISSION: {
+    pattern: /^FM\s*(\d+(?:\.\d+)?)$/i,
+    description: 'Agency commission percentage',
+    example: 'FM5',
+  },
+  FORM_OF_PAYMENT: {
+    pattern: /^FP\s*(.+)$/i,
+    description: 'Form of payment',
+    example: 'FPCCVI4111111111111111/1225 or FPCASH',
+  },
+  VALIDATING_CARRIER: {
+    pattern: /^FV\s*([A-Z\d]{2})$/i,
+    description: 'Validating carrier',
+    example: 'FV AI',
+  },
+  DISPLAY_ETICKET: {
+    pattern: /^TWD(?:\s*(.*))?$/i,
+    description: 'Display e-ticket details',
+    example: 'TWD',
+  },
+
+  // Seats (Tier 2)
+  SEAT_MAP: {
+    pattern: /^SM\s*(\d{1,2})$/i,
+    description: 'Display seat map for segment',
+    example: 'SM1',
+  },
+  SEAT_ASSIGN: {
+    pattern: /^ST\s*\/(.+)$/i,
+    description: 'Assign specific seat or preference',
+    example: 'ST/12A/P1/S1 or ST/W/P1/S1',
+  },
+  SEAT_CANCEL: {
+    pattern: /^SX(?:\s*(.*))?$/i,
+    description: 'Cancel seat assignment',
+    example: 'SX/P1/S1 or SXALL',
+  },
+
+  // Queues (Tier 2)
+  QUEUE_COUNT: {
+    pattern: /^QT$/i,
+    description: 'Queue count summary',
+    example: 'QT',
+  },
+  QUEUE_START: {
+    pattern: /^QS\s*(\d{1,2})$/i,
+    description: 'Start processing queue',
+    example: 'QS8',
+  },
+  QUEUE_NEXT: {
+    pattern: /^QN$/i,
+    description: 'Next PNR in queue',
+    example: 'QN',
+  },
+  QUEUE_IGNORE: {
+    pattern: /^QI$/i,
+    description: 'Ignore and exit queue',
+    example: 'QI',
+  },
+  QUEUE_FINISH: {
+    pattern: /^QF$/i,
+    description: 'Finish and remove PNR from queue',
+    example: 'QF',
+  },
+
+  // Hotels & Cars (Tier 2)
+  HOTEL_LIST: {
+    pattern: /^HL\s*([A-Z]{3})$/i,
+    description: 'Hotel property list for city',
+    example: 'HLLON',
+  },
+  HOTEL_AVAIL: {
+    pattern: /^HA\s*([A-Z]{3})(.*)$/i,
+    description: 'Hotel room availability',
+    example: 'HALON15JUN-3',
+  },
+  HOTEL_SELL: {
+    pattern: /^HS\s*(\d{1,2})$/i,
+    description: 'Book hotel room from availability',
+    example: 'HS1',
+  },
+  CAR_LIST: {
+    pattern: /^CL\s*([A-Z]{3})$/i,
+    description: 'Car rental location list',
+    example: 'CLPAR',
+  },
+  CAR_AVAIL: {
+    pattern: /^CA\s*([A-Z]{3})(.*)$/i,
+    description: 'Car rental availability',
+    example: 'CALHR15JUN-3',
+  },
+};
+

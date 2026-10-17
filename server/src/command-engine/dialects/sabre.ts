@@ -32,6 +32,47 @@ export class SabreDialect implements Dialect {
   readonly name = 'sabre';
 
   execute(rawInput: string, state: SessionState, store: DataStore): CommandResult {
+    const trimmed = rawInput.trim();
+    if (!trimmed) {
+      return { output: '', newState: state };
+    }
+
+    // Check for command stacking using delimiter '¥'
+    if (trimmed.includes('¥')) {
+      const parts = trimmed.split('¥');
+      let currentState = state;
+      const outputs: string[] = [];
+
+      for (const part of parts) {
+        const subInput = part.trim();
+        if (!subInput) continue;
+
+        const res = this.executeSingle(subInput, currentState, store);
+        outputs.push(res.output);
+        currentState = res.newState;
+
+        if (
+          res.output.startsWith('CHECK FORMAT') ||
+          res.output.startsWith('SIGN IN REQUIRED') ||
+          res.output.startsWith('NEED ') ||
+          res.output.startsWith('NO ') ||
+          res.output.startsWith('INVALID ') ||
+          res.output.startsWith('ERROR')
+        ) {
+          break;
+        }
+      }
+
+      return {
+        output: outputs.join('\n'),
+        newState: currentState,
+      };
+    }
+
+    return this.executeSingle(trimmed, state, store);
+  }
+
+  private executeSingle(rawInput: string, state: SessionState, store: DataStore): CommandResult {
     const input = rawInput.trim().toUpperCase();
 
     // Empty input
@@ -40,9 +81,13 @@ export class SabreDialect implements Dialect {
     }
 
     // Dialect switching commands
-    if (input === 'SET AMADEUS' || input === 'DIALECT AMADEUS') {
+    if (
+      input === 'SET AMADEUS' ||
+      input === 'DIALECT AMADEUS' ||
+      input === 'SET DIALECT AMADEUS'
+    ) {
       return {
-        output: 'DIALECT SWITCHED TO AMADEUS (STUB/PREVIEW MODE ACTIVE)',
+        output: 'DIALECT SWITCHED TO AMADEUS',
         newState: {
           ...state,
           dialect: 'amadeus',
@@ -50,7 +95,11 @@ export class SabreDialect implements Dialect {
       };
     }
 
-    if (input === 'SET SABRE' || input === 'DIALECT SABRE') {
+    if (
+      input === 'SET SABRE' ||
+      input === 'DIALECT SABRE' ||
+      input === 'SET DIALECT SABRE'
+    ) {
       return {
         output: 'DIALECT IS ALREADY SABRE',
         newState: state,

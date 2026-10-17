@@ -239,13 +239,39 @@ html, body {
 /* Live Active Command Input - Inline Monospace Caret */
 .active-input-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   position: relative;
   margin-top: 8px;
   font-family: var(--term-font);
   font-size: 16px;
   line-height: 1.5;
   white-space: pre;
+}
+
+.stack-char-btn {
+  background: var(--term-surface, #111a14);
+  border: 1px solid var(--term-border, #1a3322);
+  color: var(--term-green);
+  font-family: var(--term-font);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 1px 6px;
+  margin-right: 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+  line-height: 1.2;
+}
+
+.stack-char-btn:hover {
+  background: var(--term-green);
+  color: var(--term-bg, #000000);
+  box-shadow: 0 0 8px var(--term-green-glow);
+}
+
+.stack-char-btn:active {
+  transform: scale(0.95);
 }
 
 .input-prompt-symbol {

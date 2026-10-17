@@ -28,6 +28,7 @@ export function checkScenario(
     };
   }
 
+  const isAmadeus = scenario.dialect === 'amadeus' || state.dialect === 'amadeus';
   let score = 0;
   const feedback: string[] = [];
 
@@ -36,7 +37,11 @@ export function checkScenario(
     score += 10;
     feedback.push(`✓ Signed in as agent ${state.agentId} (+10)`);
   } else {
-    feedback.push('✗ Agent is not signed in. Use SI*<ID> (e.g. SI*7890)');
+    feedback.push(
+      isAmadeus
+        ? '✗ Agent is not signed in. Use JI <AGENT-ID>/<DUTY> (e.g. JI 1234AA/SU)'
+        : '✗ Agent is not signed in. Use SI*<ID> (e.g. SI*7890)'
+    );
   }
 
   // Retrieve PNR data: either saved in currentPnr or in workingPnr
@@ -76,26 +81,31 @@ export function checkScenario(
     }
   }
 
-  // Check 2: Itinerary segments
+  // Check 2: Outbound route
   const hasOutbound = segments.some(
     (s) =>
       s.origin === scenario.expectedRoute.origin &&
       s.destination === scenario.expectedRoute.destination &&
-      (!scenario.expectedRoute.classCode || s.classCode === scenario.expectedRoute.classCode) &&
-      (!scenario.expectedRoute.airlineCode || s.airlineCode === scenario.expectedRoute.airlineCode)
+      (!scenario.expectedRoute.airlineCode || s.airlineCode === scenario.expectedRoute.airlineCode) &&
+      (!scenario.expectedRoute.classCode || s.classCode === scenario.expectedRoute.classCode)
   );
 
   if (hasOutbound) {
     score += 25;
     feedback.push(
-      `✓ Correct outbound route booked (${scenario.expectedRoute.origin}-${scenario.expectedRoute.destination}) (+25)`
+      `✓ Correct outbound flight booked (${scenario.expectedRoute.origin}-${scenario.expectedRoute.destination}${
+        scenario.expectedRoute.airlineCode ? ' on ' + scenario.expectedRoute.airlineCode : ''
+      }${scenario.expectedRoute.classCode ? ' in ' + scenario.expectedRoute.classCode : ''}) (+25)`
     );
   } else {
     feedback.push(
-      `✗ Missing or incorrect flight segment for ${scenario.expectedRoute.origin} to ${scenario.expectedRoute.destination}`
+      `✗ Missing or incorrect flight segment for ${scenario.expectedRoute.origin} to ${scenario.expectedRoute.destination}${
+        scenario.expectedRoute.airlineCode ? ' (expected airline ' + scenario.expectedRoute.airlineCode + ')' : ''
+      }${scenario.expectedRoute.classCode ? ' (expected class ' + scenario.expectedRoute.classCode + ')' : ''}`
     );
   }
 
+  // Return segment if required
   if (scenario.expectedRoute.returnLeg) {
     const hasReturn = segments.some(
       (s) =>
@@ -113,7 +123,7 @@ export function checkScenario(
       );
     }
   } else {
-    score += 5; // Bonus for one-way scenario
+    score += 5;
   }
 
   // Check 3: Passengers
@@ -121,15 +131,14 @@ export function checkScenario(
     score += 20;
     feedback.push(`✓ Passenger count matches requirement (${passengers.length} pax) (+20)`);
 
-    // Verify types (e.g. CHD if expected)
     const hasNeededTypes = scenario.expectedPax.types.every((t) =>
       passengers.some((p) => p.paxType === t)
     );
     if (hasNeededTypes) {
       score += 10;
-      feedback.push(`✓ Passenger passenger types match (ADT/CHD) (+10)`);
+      feedback.push(`✓ Passenger types match requirement (${scenario.expectedPax.types.join('/')}) (+10)`);
     } else {
-      feedback.push('✗ Missing required passenger type (check Child CHD or Infant INF syntax)');
+      feedback.push('✗ Missing required passenger type (ensure Child CHD or Infant INF syntax is correct)');
     }
   } else {
     feedback.push(
@@ -138,25 +147,38 @@ export function checkScenario(
   }
 
   // Check 4: Mandatory fields
-  if (phone) {
+  const hasContact = phone || state.pnrElements?.some((el) => ['AP', 'APM', 'APE', 'SR CTCM', 'SR CTCE'].includes(el.element_type));
+  if (hasContact) {
     score += 5;
-    feedback.push(`✓ Phone field present (${phone}) (+5)`);
+    feedback.push(`✓ Contact information present (+5)`);
   } else {
-    feedback.push('✗ Missing phone field (use 9<PHONE>)');
+    feedback.push(
+      isAmadeus
+        ? '✗ Missing contact field (use AP, APM-, or SR CTCM-)'
+        : '✗ Missing phone field (use 9<PHONE>)'
+    );
   }
 
   if (ticketing) {
     score += 5;
     feedback.push(`✓ Ticketing arrangement present (${ticketing}) (+5)`);
   } else {
-    feedback.push('✗ Missing ticketing field (use 7TAW/)');
+    feedback.push(
+      isAmadeus
+        ? '✗ Missing ticketing arrangement (use TKOK or TKTL<DATE>/<TIME>)'
+        : '✗ Missing ticketing field (use 7TAW/)'
+    );
   }
 
   if (receivedFrom) {
     score += 5;
     feedback.push(`✓ Received from present (${receivedFrom}) (+5)`);
   } else {
-    feedback.push('✗ Missing received from field (use 6<NAME>)');
+    feedback.push(
+      isAmadeus
+        ? '✗ Missing received from field (use RF <NAME>)'
+        : '✗ Missing received from field (use 6<NAME>)'
+    );
   }
 
   // Check 5: Transaction ended & saved
@@ -164,7 +186,11 @@ export function checkScenario(
     score += 15;
     feedback.push(`✓ PNR ended and saved with Record Locator: ${locator} (+15)`);
   } else {
-    feedback.push('✗ PNR has not been finalized. Run E or ER to save.');
+    feedback.push(
+      isAmadeus
+        ? '✗ PNR has not been finalized. Run ER or ET to commit.'
+        : '✗ PNR has not been finalized. Run E or ER to save.'
+    );
   }
 
   const passed = score >= 80;

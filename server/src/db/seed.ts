@@ -478,6 +478,8 @@ export function seedDatabase(targetDb?: DatabaseType | string): void {
     insertHotel.run('LOS', 'SI', 'LAGOS CONTINENTAL HOTEL', '52A Kofo Abayomi St, VI', 14000000, 'NGN', 4);
     insertHotel.run('ABV', 'HL', 'TRANSCORP HILTON ABUJA', '1 Aguiyi Ironsi St, Maitama', 19500000, 'NGN', 5);
     insertHotel.run('ABV', 'SI', 'SHERATON ABUJA HOTEL', 'Ladi Kwali St, Wuse Zone 4', 13500000, 'NGN', 4);
+    insertHotel.run('LON', 'HL', 'HILTON LONDON PADDINGTON', '146 Praed St, London', 24000000, 'GBP', 4);
+    insertHotel.run('LON', 'MC', 'MARRIOTT LONDON GROSVENOR SQ', 'Grosvenor Square, London', 28000000, 'GBP', 5);
     insertHotel.run('LHR', 'HL', 'HILTON LONDON HEATHROW AIRPORT', 'Terminal 4, Heathrow Airport', 24000000, 'NGN', 4);
     insertHotel.run('BOM', 'HL', 'THE TAJ MAHAL PALACE MUMBAI', 'Apollo Bunder, Colaba', 32000000, 'NGN', 5);
     insertHotel.run('PAR', 'HL', 'HILTON PARIS OPERA', '108 Rue Saint-Lazare', 38000000, 'NGN', 4);
@@ -492,6 +494,8 @@ export function seedDatabase(targetDb?: DatabaseType | string): void {
     insertCar.run('LOS', 'SX', 'SIXT LAGOS VI', 'DOWNTOWN', 4800000, 'NGN');
     insertCar.run('ABV', 'ZE', 'HERTZ ABUJA AIRPORT', 'AIRPORT', 4600000, 'NGN');
     insertCar.run('ABV', 'ZI', 'AVIS ABUJA MAITAMA', 'DOWNTOWN', 4300000, 'NGN');
+    insertCar.run('LON', 'ZE', 'HERTZ LONDON MARBLE ARCH', 'DOWNTOWN', 6500000, 'GBP');
+    insertCar.run('LON', 'ZI', 'AVIS LONDON VICTORIA', 'DOWNTOWN', 6200000, 'GBP');
     insertCar.run('LHR', 'ZE', 'HERTZ HEATHROW T4', 'AIRPORT', 6500000, 'NGN');
     insertCar.run('LHR', 'EP', 'EUROPCAR HEATHROW', 'AIRPORT', 6200000, 'NGN');
     insertCar.run('BOM', 'ZE', 'HERTZ MUMBAI AIRPORT', 'AIRPORT', 5000000, 'NGN');
