@@ -75,25 +75,65 @@ export function formatColumns(rows: string[][], widths: number[]): string {
  * of that date (today or in the future).
  */
 export function parseSabreDate(dateStr: string): Date | null {
+  return parseGdsDate(dateStr);
+}
+
+/**
+ * Parse a GDS date string with support for:
+ * 1. "19OCT" (rolls to next occurrence if in past)
+ * 2. "19OCT26" or "19OCT2026" (explicit 2 or 4 digit year)
+ * 3. Bare day "19" (for current month, rolls to next occurrence if in past)
+ */
+export function parseGdsDate(dateStr: string, referenceDate: Date = new Date()): Date | null {
+  const clean = dateStr.trim().toUpperCase();
+  if (!clean) return null;
+
   const monthMap: Record<string, number> = {};
   MONTHS.forEach((m, i) => { monthMap[m] = i; });
 
-  const match = dateStr.match(/^(\d{1,2})([A-Z]{3})$/);
-  if (!match) return null;
+  const ref = new Date(referenceDate);
+  ref.setHours(0, 0, 0, 0);
 
-  const day = parseInt(match[1], 10);
-  const month = monthMap[match[2]];
-  if (month === undefined || day < 1 || day > 31) return null;
-
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-
-  let year = now.getFullYear();
-  let candidate = new Date(year, month, day);
-  if (candidate < now) {
-    candidate = new Date(year + 1, month, day);
+  // Format 1: 19OCT26 or 19OCT2026
+  const fullMatch = clean.match(/^(\d{1,2})([A-Z]{3})(\d{2}|\d{4})$/);
+  if (fullMatch) {
+    const day = parseInt(fullMatch[1], 10);
+    const month = monthMap[fullMatch[2]];
+    let year = parseInt(fullMatch[3], 10);
+    if (year < 100) year = 2000 + year;
+    if (month === undefined || day < 1 || day > 31) return null;
+    return new Date(year, month, day);
   }
-  return candidate;
+
+  // Format 2: 19OCT
+  const monthMatch = clean.match(/^(\d{1,2})([A-Z]{3})$/);
+  if (monthMatch) {
+    const day = parseInt(monthMatch[1], 10);
+    const month = monthMap[monthMatch[2]];
+    if (month === undefined || day < 1 || day > 31) return null;
+    let year = ref.getFullYear();
+    let candidate = new Date(year, month, day);
+    if (candidate < ref) {
+      candidate = new Date(year + 1, month, day);
+    }
+    return candidate;
+  }
+
+  // Format 3: bare day "19"
+  const dayMatch = clean.match(/^(\d{1,2})$/);
+  if (dayMatch) {
+    const day = parseInt(dayMatch[1], 10);
+    if (day < 1 || day > 31) return null;
+    let year = ref.getFullYear();
+    let month = ref.getMonth();
+    let candidate = new Date(year, month, day);
+    if (candidate < ref) {
+      candidate = new Date(year, month + 1, day);
+    }
+    return candidate;
+  }
+
+  return null;
 }
 
 /** Format a Date as ISO date string (YYYY-MM-DD) */

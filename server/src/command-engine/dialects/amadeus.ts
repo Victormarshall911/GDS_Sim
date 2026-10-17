@@ -1,18 +1,23 @@
 import type { Dialect } from './interface';
 import type { SessionState, CommandResult, DataStore } from '../types';
 import { AMADEUS_COMMAND_MAP } from '../command-config';
+import { handleAmadeusAvailability } from './amadeus-commands/availability';
 
 export class AmadeusDialect implements Dialect {
   readonly name = 'amadeus';
 
-  execute(rawInput: string, state: SessionState, _store: DataStore): CommandResult {
+  execute(rawInput: string, state: SessionState, store: DataStore): CommandResult {
     const input = rawInput.trim().toUpperCase();
 
     if (!input) {
       return { output: '', newState: state };
     }
 
-    if (input === 'SET SABRE' || input === 'DIALECT SABRE') {
+    if (
+      input === 'SET SABRE' ||
+      input === 'DIALECT SABRE' ||
+      input === 'SET DIALECT SABRE'
+    ) {
       return {
         output: 'DIALECT SWITCHED TO SABRE',
         newState: {
@@ -22,11 +27,20 @@ export class AmadeusDialect implements Dialect {
       };
     }
 
-    if (input === 'SET AMADEUS' || input === 'DIALECT AMADEUS') {
+    if (
+      input === 'SET AMADEUS' ||
+      input === 'DIALECT AMADEUS' ||
+      input === 'SET DIALECT AMADEUS'
+    ) {
       return {
         output: 'DIALECT IS ALREADY AMADEUS',
         newState: state,
       };
+    }
+
+    // Availability commands: AN, AD, AE, AA, SN, TN
+    if (/^(AN|AD|AE|AA|SN|TN)/.test(input)) {
+      return handleAmadeusAvailability(input, state, store);
     }
 
     // Sign in: JI <ID>

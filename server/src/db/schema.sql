@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS pnr_segments (
 CREATE TABLE IF NOT EXISTS command_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   session_id TEXT NOT NULL,
+  dialect TEXT NOT NULL DEFAULT 'sabre',
   timestamp TEXT NOT NULL DEFAULT (datetime('now')),
   input TEXT NOT NULL,
   output TEXT NOT NULL
@@ -125,8 +126,94 @@ CREATE TABLE IF NOT EXISTS active_sessions (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Stored TST (Transitional Stored Ticket / pricing records)
+CREATE TABLE IF NOT EXISTS tst (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  pnr_locator TEXT NOT NULL,
+  tst_number INTEGER NOT NULL DEFAULT 1,
+  pax_type TEXT NOT NULL DEFAULT 'ADT',
+  base_fare_ngn INTEGER NOT NULL,
+  taxes_ngn INTEGER NOT NULL,
+  total_fare_ngn INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'NGN',
+  fare_basis TEXT NOT NULL,
+  validating_carrier TEXT NOT NULL DEFAULT 'P4',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (pnr_locator) REFERENCES pnrs(record_locator) ON DELETE CASCADE
+);
+
+-- Generic Numbered PNR Elements (for Amadeus element numbering: AP, SR, OS, FFN, TK, RF, FP, etc.)
+CREATE TABLE IF NOT EXISTS pnr_elements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  pnr_locator TEXT NOT NULL,
+  element_number INTEGER NOT NULL,
+  element_type TEXT NOT NULL,
+  content TEXT NOT NULL,
+  pax_ref TEXT,
+  seg_ref TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (pnr_locator) REFERENCES pnrs(record_locator) ON DELETE CASCADE
+);
+
+-- Queues & Queue Items
+CREATE TABLE IF NOT EXISTS queues (
+  queue_number INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS queue_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  queue_number INTEGER NOT NULL,
+  pnr_locator TEXT NOT NULL,
+  pax_name TEXT NOT NULL,
+  message TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (queue_number) REFERENCES queues(queue_number)
+);
+
+-- Hotel Inventory (Tier 2)
+CREATE TABLE IF NOT EXISTS hotels (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  city_code TEXT NOT NULL,
+  chain_code TEXT NOT NULL,
+  name TEXT NOT NULL,
+  address TEXT NOT NULL,
+  rate_ngn INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'NGN',
+  stars INTEGER NOT NULL DEFAULT 4
+);
+
+-- Car Rental Locations (Tier 2)
+CREATE TABLE IF NOT EXISTS car_locations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  city_code TEXT NOT NULL,
+  vendor_code TEXT NOT NULL,
+  name TEXT NOT NULL,
+  location_type TEXT NOT NULL DEFAULT 'AIRPORT',
+  daily_rate_ngn INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'NGN'
+);
+
+-- Issued E-Tickets
+CREATE TABLE IF NOT EXISTS e_tickets (
+  ticket_number TEXT PRIMARY KEY,
+  pnr_locator TEXT NOT NULL,
+  pax_name TEXT NOT NULL,
+  airline_code TEXT NOT NULL,
+  total_amount INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'ISSUED',
+  issued_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (pnr_locator) REFERENCES pnrs(record_locator) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_flights_route ON flights(origin, destination);
 CREATE INDEX IF NOT EXISTS idx_flight_classes_flight ON flight_classes(flight_id);
 CREATE INDEX IF NOT EXISTS idx_pnr_segments_locator ON pnr_segments(pnr_locator);
 CREATE INDEX IF NOT EXISTS idx_pnr_passengers_locator ON pnr_passengers(pnr_locator);
+CREATE INDEX IF NOT EXISTS idx_tst_locator ON tst(pnr_locator);
+CREATE INDEX IF NOT EXISTS idx_pnr_elements_locator ON pnr_elements(pnr_locator);
+CREATE INDEX IF NOT EXISTS idx_queue_items_q ON queue_items(queue_number);
+CREATE INDEX IF NOT EXISTS idx_e_tickets_pnr ON e_tickets(pnr_locator);
+
 

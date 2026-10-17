@@ -89,6 +89,86 @@ export interface SessionState {
   /** Record locator of a retrieved PNR currently in context */
   currentPnr: string | null;
   activeScenario: Scenario | null;
+  // Amadeus specific state fields
+  tsts?: TstRecord[];
+  pnrElements?: PnrElementRecord[];
+  eTickets?: ETicketRecord[];
+  activeQueue?: { queueNumber: number; currentIndex: number } | null;
+  seatAssignments?: Record<string, string>;
+  lastDisplayContent?: string;
+}
+
+// ─── Amadeus Records ──────────────────────────────────────────
+
+export interface TstRecord {
+  id?: number;
+  pnr_locator: string;
+  tst_number: number;
+  pax_type: string;
+  base_fare_ngn: number;
+  taxes_ngn: number;
+  total_fare_ngn: number;
+  currency: string;
+  fare_basis: string;
+  validating_carrier: string;
+  created_at?: string;
+}
+
+export interface PnrElementRecord {
+  id?: number;
+  pnr_locator: string;
+  element_number: number;
+  element_type: string;
+  content: string;
+  pax_ref?: string;
+  seg_ref?: string;
+}
+
+export interface QueueRecord {
+  queue_number: number;
+  name: string;
+  description?: string;
+  count?: number;
+}
+
+export interface QueueItemRecord {
+  id: number;
+  queue_number: number;
+  pnr_locator: string;
+  pax_name: string;
+  message?: string;
+  created_at: string;
+}
+
+export interface HotelRecord {
+  id: number;
+  city_code: string;
+  chain_code: string;
+  name: string;
+  address: string;
+  rate_ngn: number;
+  currency: string;
+  stars: number;
+}
+
+export interface CarLocationRecord {
+  id: number;
+  city_code: string;
+  vendor_code: string;
+  name: string;
+  location_type: string;
+  daily_rate_ngn: number;
+  currency: string;
+}
+
+export interface ETicketRecord {
+  ticket_number: string;
+  pnr_locator: string;
+  pax_name: string;
+  airline_code: string;
+  total_amount: number;
+  status: string;
+  issued_at?: string;
 }
 
 // ─── Command Result ───────────────────────────────────────────
@@ -207,5 +287,18 @@ export interface DataStore {
   savePracticeAttempt(sessionId: string, scenarioId: string, score: number, feedback: string): void;
   saveSession?(sessionId: string, state: SessionState): void;
   getSession?(sessionId: string): SessionState | null;
+  // Amadeus additions
+  saveTST?(tst: TstRecord): void;
+  getTSTs?(pnrLocator: string): TstRecord[];
+  savePnrElement?(elem: PnrElementRecord): void;
+  getPnrElements?(pnrLocator: string): PnrElementRecord[];
+  deletePnrElement?(pnrLocator: string, elementNumber: number): void;
+  getQueues?(): QueueRecord[];
+  getQueueItems?(queueNumber: number): QueueItemRecord[];
+  removeQueueItem?(id: number): void;
+  searchHotels?(cityCode: string): HotelRecord[];
+  searchCars?(cityCode: string): CarLocationRecord[];
+  saveETicket?(ticket: ETicketRecord): void;
+  getETickets?(pnrLocator: string): ETicketRecord[];
 }
 

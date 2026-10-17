@@ -9,6 +9,13 @@ import type {
   PassengerEntry,
   SegmentEntry,
   SessionState,
+  TstRecord,
+  PnrElementRecord,
+  QueueRecord,
+  QueueItemRecord,
+  HotelRecord,
+  CarLocationRecord,
+  ETicketRecord,
 } from '../command-engine/types';
 
 export class SqliteDataStore implements DataStore {
@@ -347,5 +354,167 @@ export class SqliteDataStore implements DataStore {
       // Ignore session read failure
     }
     return null;
+  }
+
+  // ─── Amadeus Queries ───────────────────────────────────────
+
+  saveTST(tst: TstRecord): void {
+    try {
+      this.db
+        .prepare(
+          `INSERT INTO tst (pnr_locator, tst_number, pax_type, base_fare_ngn, taxes_ngn, total_fare_ngn, currency, fare_basis, validating_carrier)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          tst.pnr_locator,
+          tst.tst_number,
+          tst.pax_type,
+          tst.base_fare_ngn,
+          tst.taxes_ngn,
+          tst.total_fare_ngn,
+          tst.currency,
+          tst.fare_basis,
+          tst.validating_carrier
+        );
+    } catch {
+      // Ignore TST save error
+    }
+  }
+
+  getTSTs(pnrLocator: string): TstRecord[] {
+    try {
+      return this.db
+        .prepare('SELECT * FROM tst WHERE pnr_locator = ? ORDER BY tst_number ASC')
+        .all(pnrLocator) as TstRecord[];
+    } catch {
+      return [];
+    }
+  }
+
+  savePnrElement(elem: PnrElementRecord): void {
+    try {
+      this.db
+        .prepare(
+          `INSERT INTO pnr_elements (pnr_locator, element_number, element_type, content, pax_ref, seg_ref)
+           VALUES (?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          elem.pnr_locator,
+          elem.element_number,
+          elem.element_type,
+          elem.content,
+          elem.pax_ref ?? null,
+          elem.seg_ref ?? null
+        );
+    } catch {
+      // Ignore element save error
+    }
+  }
+
+  getPnrElements(pnrLocator: string): PnrElementRecord[] {
+    try {
+      return this.db
+        .prepare('SELECT * FROM pnr_elements WHERE pnr_locator = ? ORDER BY element_number ASC')
+        .all(pnrLocator) as PnrElementRecord[];
+    } catch {
+      return [];
+    }
+  }
+
+  deletePnrElement(pnrLocator: string, elementNumber: number): void {
+    try {
+      this.db
+        .prepare('DELETE FROM pnr_elements WHERE pnr_locator = ? AND element_number = ?')
+        .run(pnrLocator, elementNumber);
+    } catch {
+      // Ignore
+    }
+  }
+
+  getQueues(): QueueRecord[] {
+    try {
+      const queues = this.db
+        .prepare('SELECT queue_number, name, description FROM queues ORDER BY queue_number ASC')
+        .all() as QueueRecord[];
+      return queues.map((q) => {
+        const countRow = this.db
+          .prepare('SELECT COUNT(*) as count FROM queue_items WHERE queue_number = ?')
+          .get(q.queue_number) as { count: number };
+        return {
+          ...q,
+          count: countRow.count,
+        };
+      });
+    } catch {
+      return [];
+    }
+  }
+
+  getQueueItems(queueNumber: number): QueueItemRecord[] {
+    try {
+      return this.db
+        .prepare('SELECT * FROM queue_items WHERE queue_number = ? ORDER BY id ASC')
+        .all(queueNumber) as QueueItemRecord[];
+    } catch {
+      return [];
+    }
+  }
+
+  removeQueueItem(id: number): void {
+    try {
+      this.db.prepare('DELETE FROM queue_items WHERE id = ?').run(id);
+    } catch {
+      // Ignore
+    }
+  }
+
+  searchHotels(cityCode: string): HotelRecord[] {
+    try {
+      return this.db
+        .prepare('SELECT * FROM hotels WHERE city_code = ? ORDER BY rate_ngn ASC')
+        .all(cityCode.toUpperCase()) as HotelRecord[];
+    } catch {
+      return [];
+    }
+  }
+
+  searchCars(cityCode: string): CarLocationRecord[] {
+    try {
+      return this.db
+        .prepare('SELECT * FROM car_locations WHERE city_code = ? ORDER BY daily_rate_ngn ASC')
+        .all(cityCode.toUpperCase()) as CarLocationRecord[];
+    } catch {
+      return [];
+    }
+  }
+
+  saveETicket(ticket: ETicketRecord): void {
+    try {
+      this.db
+        .prepare(
+          `INSERT INTO e_tickets (ticket_number, pnr_locator, pax_name, airline_code, total_amount, status)
+           VALUES (?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          ticket.ticket_number,
+          ticket.pnr_locator,
+          ticket.pax_name,
+          ticket.airline_code,
+          ticket.total_amount,
+          ticket.status
+        );
+    } catch {
+      // Ignore ticket save error
+    }
+  }
+
+  getETickets(pnrLocator: string): ETicketRecord[] {
+    try {
+      return this.db
+        .prepare('SELECT * FROM e_tickets WHERE pnr_locator = ? ORDER BY issued_at ASC')
+        .all(pnrLocator) as ETicketRecord[];
+    } catch {
+      return [];
+    }
   }
 }

@@ -104,13 +104,17 @@ export function seedDatabase(targetDb?: DatabaseType | string): void {
       ['ORD', 'OHare International', 'Chicago', 'CHI', 'US', 'America/Chicago'],
       ['IAD', 'Washington Dulles International', 'Washington', 'WAS', 'US', 'America/New_York'],
       ['YYZ', 'Toronto Pearson International', 'Toronto', 'YTO', 'CA', 'America/Toronto'],
+
+      // India & Asia (for Amadeus reference examples)
+      ['BOM', 'Chhatrapati Shivaji Maharaj International', 'Mumbai', 'BOM', 'IN', 'Asia/Kolkata'],
+      ['DEL', 'Indira Gandhi International', 'Delhi', 'DEL', 'IN', 'Asia/Kolkata'],
     ];
 
     for (const [code, name, city, city_code, country, timezone] of airports) {
       insertAirport.run(code, name, city, city_code, country, timezone);
     }
 
-    // 3. Airlines (18)
+    // 3. Airlines (20)
     const airlines = [
       ['W3', 'Arik Air', '725'],
       ['P4', 'Air Peace', '810'],
@@ -118,6 +122,8 @@ export function seedDatabase(targetDb?: DatabaseType | string): void {
       ['OF', 'Overland Airways', '830'],
       ['UN', 'United Nigeria Airlines', '840'],
       ['VM', 'Max Air', '850'],
+      ['AW', 'Dana Air', '999'],
+      ['AI', 'Air India', '098'],
       ['BA', 'British Airways', '125'],
       ['VS', 'Virgin Atlantic', '932'],
       ['EK', 'Emirates', '176'],
@@ -242,8 +248,23 @@ export function seedDatabase(targetDb?: DatabaseType | string): void {
       { airline: 'TK', flightNum: 625, orig: 'IST', dest: 'LOS', dep: '14:15', arr: '19:35', ac: '333', days: '1234567' },
 
       // LOS - JNB
-      { airline: 'P4', flightNum: 7200, orig: 'LOS', dest: 'JNB', dep: '01:00', arr: '08:00', ac: '77W', days: '135' },
-      { airline: 'P4', flightNum: 7201, orig: 'JNB', dest: 'LOS', dep: '11:00', arr: '16:00', ac: '77W', days: '135' },
+      // LOS - ABV additional flights
+      { airline: 'AW', flightNum: 201, orig: 'LOS', dest: 'ABV', dep: '11:15', arr: '12:30', ac: '738', days: '1234567' },
+      { airline: 'AW', flightNum: 205, orig: 'LOS', dest: 'ABV', dep: '16:30', arr: '17:45', ac: '738', days: '1234567' },
+      // ABV - LOS additional flights
+      { airline: 'AW', flightNum: 202, orig: 'ABV', dest: 'LOS', dep: '13:30', arr: '14:45', ac: '738', days: '1234567' },
+      { airline: 'AW', flightNum: 206, orig: 'ABV', dest: 'LOS', dep: '18:30', arr: '19:45', ac: '738', days: '1234567' },
+      // ABV - PHC
+      { airline: 'P4', flightNum: 7170, orig: 'ABV', dest: 'PHC', dep: '09:00', arr: '10:05', ac: '738', days: '1234567' },
+      { airline: 'W3', flightNum: 560, orig: 'ABV', dest: 'PHC', dep: '14:00', arr: '15:05', ac: '738', days: '1234567' },
+      // PHC - ABV
+      { airline: 'P4', flightNum: 7171, orig: 'PHC', dest: 'ABV', dep: '11:00', arr: '12:05', ac: '738', days: '1234567' },
+      { airline: 'W3', flightNum: 561, orig: 'PHC', dest: 'ABV', dep: '16:00', arr: '17:05', ac: '738', days: '1234567' },
+      // India Routes (for Amadeus documentation examples: BOM-DEL)
+      { airline: 'AI', flightNum: 101, orig: 'BOM', dest: 'DEL', dep: '08:00', arr: '10:15', ac: '788', days: '1234567' },
+      { airline: 'AI', flightNum: 103, orig: 'BOM', dest: 'DEL', dep: '17:30', arr: '19:45', ac: '788', days: '1234567' },
+      { airline: 'AI', flightNum: 102, orig: 'DEL', dest: 'BOM', dep: '11:00', arr: '13:15', ac: '788', days: '1234567' },
+      { airline: 'AI', flightNum: 104, orig: 'DEL', dest: 'BOM', dep: '20:30', arr: '22:45', ac: '788', days: '1234567' },
     ];
 
     const standardClasses = [
@@ -267,8 +288,8 @@ export function seedDatabase(targetDb?: DatabaseType | string): void {
         f.arr,
         f.ac,
         f.days,
-        '2026-01-01',
-        '2027-12-31'
+        '2020-01-01',
+        '2035-12-31'
       );
       const flightId = Number(info.lastInsertRowid);
 
@@ -375,6 +396,20 @@ export function seedDatabase(targetDb?: DatabaseType | string): void {
       // International LOS <-> IST
       { orig: 'LOS', dest: 'IST', airline: 'TK', class: 'Y', ngn: 98000000, usd: 61250, basis: 'YOWTR', pax: 'ADT' },
       { orig: 'LOS', dest: 'IST', airline: 'TK', class: 'J', ngn: 340000000, usd: 212500, basis: 'JOWTR', pax: 'ADT' },
+
+      // Dana Air (AW) LOS <-> ABV
+      { orig: 'LOS', dest: 'ABV', airline: 'AW', class: 'Y', ngn: 8800000, usd: 5500, basis: 'YOWNG', pax: 'ADT' },
+      { orig: 'ABV', dest: 'LOS', airline: 'AW', class: 'Y', ngn: 8800000, usd: 5500, basis: 'YOWNG', pax: 'ADT' },
+
+      // ABV <-> PHC
+      { orig: 'ABV', dest: 'PHC', airline: 'P4', class: 'Y', ngn: 9200000, usd: 5750, basis: 'YOWNG', pax: 'ADT' },
+      { orig: 'PHC', dest: 'ABV', airline: 'P4', class: 'Y', ngn: 9200000, usd: 5750, basis: 'YOWNG', pax: 'ADT' },
+
+      // BOM <-> DEL (Air India)
+      { orig: 'BOM', dest: 'DEL', airline: 'AI', class: 'Y', ngn: 12000000, usd: 7500, basis: 'YOWIN', pax: 'ADT' },
+      { orig: 'BOM', dest: 'DEL', airline: 'AI', class: 'J', ngn: 35000000, usd: 22000, basis: 'JOWIN', pax: 'ADT' },
+      { orig: 'DEL', dest: 'BOM', airline: 'AI', class: 'Y', ngn: 12000000, usd: 7500, basis: 'YOWIN', pax: 'ADT' },
+      { orig: 'DEL', dest: 'BOM', airline: 'AI', class: 'J', ngn: 35000000, usd: 22000, basis: 'JOWIN', pax: 'ADT' },
     ];
 
     for (const f of fareTemplates) {
@@ -415,6 +450,52 @@ export function seedDatabase(targetDb?: DatabaseType | string): void {
         365
       );
     }
+
+    // 6. Queues & Queue Items
+    db.prepare('DELETE FROM queues').run();
+    db.prepare('DELETE FROM queue_items').run();
+
+    const insertQueue = db.prepare('INSERT OR REPLACE INTO queues (queue_number, name, description) VALUES (?, ?, ?)');
+    insertQueue.run(1, 'GENERAL', 'General incoming messages and schedule alerts');
+    insertQueue.run(8, 'TICKETING TIME LIMIT', 'PNRs awaiting ticket issuance deadline');
+    insertQueue.run(12, 'SCHEDULE CHANGE', 'Airline schedule adjustments');
+    insertQueue.run(20, 'SUPERVISOR', 'Supervisor escalations and VIP bookings');
+
+    const insertQueueItem = db.prepare(
+      'INSERT INTO queue_items (queue_number, pnr_locator, pax_name, message) VALUES (?, ?, ?, ?)'
+    );
+    insertQueueItem.run(1, 'WLXJFH', 'SMITH/JOHN MR', 'SCHEDULE CONFIRMATION RECEIVED FROM AIRLINE');
+    insertQueueItem.run(8, 'ABC789', 'DOE/JANE MRS', 'TICKET TIME LIMIT EXPIRING 1800');
+    insertQueueItem.run(8, 'XYZ123', 'BELLO/TUNDE MR', 'TICKET TIME LIMIT EXPIRING 2000');
+
+    // 7. Hotels (Tier 2)
+    db.prepare('DELETE FROM hotels').run();
+    const insertHotel = db.prepare(
+      'INSERT INTO hotels (city_code, chain_code, name, address, rate_ngn, currency, stars) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    );
+    insertHotel.run('LOS', 'HL', 'EKO HOTEL & SUITES', 'Plot 1415 Adetokunbo Ademola St, VI', 18500000, 'NGN', 5);
+    insertHotel.run('LOS', 'RA', 'RADISSON BLU ANCHORAGE', '1A Ozumba Mbadiwe Ave, VI', 16000000, 'NGN', 5);
+    insertHotel.run('LOS', 'SI', 'LAGOS CONTINENTAL HOTEL', '52A Kofo Abayomi St, VI', 14000000, 'NGN', 4);
+    insertHotel.run('ABV', 'HL', 'TRANSCORP HILTON ABUJA', '1 Aguiyi Ironsi St, Maitama', 19500000, 'NGN', 5);
+    insertHotel.run('ABV', 'SI', 'SHERATON ABUJA HOTEL', 'Ladi Kwali St, Wuse Zone 4', 13500000, 'NGN', 4);
+    insertHotel.run('LHR', 'HL', 'HILTON LONDON HEATHROW AIRPORT', 'Terminal 4, Heathrow Airport', 24000000, 'NGN', 4);
+    insertHotel.run('BOM', 'HL', 'THE TAJ MAHAL PALACE MUMBAI', 'Apollo Bunder, Colaba', 32000000, 'NGN', 5);
+    insertHotel.run('PAR', 'HL', 'HILTON PARIS OPERA', '108 Rue Saint-Lazare', 38000000, 'NGN', 4);
+
+    // 8. Car Rental Locations (Tier 2)
+    db.prepare('DELETE FROM car_locations').run();
+    const insertCar = db.prepare(
+      'INSERT INTO car_locations (city_code, vendor_code, name, location_type, daily_rate_ngn, currency) VALUES (?, ?, ?, ?, ?, ?)'
+    );
+    insertCar.run('LOS', 'ZE', 'HERTZ LAGOS AIRPORT', 'AIRPORT', 4500000, 'NGN');
+    insertCar.run('LOS', 'ZI', 'AVIS LAGOS IKEJA', 'DOWNTOWN', 4200000, 'NGN');
+    insertCar.run('LOS', 'SX', 'SIXT LAGOS VI', 'DOWNTOWN', 4800000, 'NGN');
+    insertCar.run('ABV', 'ZE', 'HERTZ ABUJA AIRPORT', 'AIRPORT', 4600000, 'NGN');
+    insertCar.run('ABV', 'ZI', 'AVIS ABUJA MAITAMA', 'DOWNTOWN', 4300000, 'NGN');
+    insertCar.run('LHR', 'ZE', 'HERTZ HEATHROW T4', 'AIRPORT', 6500000, 'NGN');
+    insertCar.run('LHR', 'EP', 'EUROPCAR HEATHROW', 'AIRPORT', 6200000, 'NGN');
+    insertCar.run('BOM', 'ZE', 'HERTZ MUMBAI AIRPORT', 'AIRPORT', 5000000, 'NGN');
+    insertCar.run('PAR', 'ZE', 'HERTZ CDG AIRPORT', 'AIRPORT', 7000000, 'NGN');
   });
 
   runSeed();

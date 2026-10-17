@@ -171,10 +171,113 @@ export const SABRE_COMMANDS = {
   },
 } as const;
 
-// ─── Amadeus Mapping Table (Phase 2) ─────────────────────────
-// This table shows the Sabre ↔ Amadeus command equivalents.
-// When you implement amadeus.ts, use these patterns.
+export const AMADEUS_CONFIG = {
+  delimiter: '+',
+  defaultAgent: {
+    agentId: process.env.DEFAULT_AMADEUS_AGENT_ID || '1234AA/SU',
+    officeId: process.env.DEFAULT_AMADEUS_OFFICE_ID || 'LOS01',
+  },
+  soldSegmentStatus: 'HK', // In Amadeus, sold segments go into working PNR as HK1
+  validationOrder: [
+    { type: 'name', error: 'NEED NAME' },
+    { type: 'itinerary', error: 'NEED ITINERARY' },
+    { type: 'contact', error: 'NEED CONTACT' },
+    { type: 'ticketing', error: 'NEED TICKETING ARRANGEMENT' },
+    { type: 'receivedFrom', error: 'NEED RECEIVED FROM' },
+  ],
+};
 
+export interface ParsedAvailabilityModifiers {
+  airlines?: string[];
+  classCode?: string;
+  directOnly?: boolean;
+  nonStopOnly?: boolean;
+  errors: string[];
+}
+
+export interface ModifierRule {
+  prefix: string;
+  description: string;
+  status: 'CONFIRMED' | 'VERIFY';
+  example: string;
+  parse: (val: string, opts: ParsedAvailabilityModifiers) => void;
+}
+
+export const AMADEUS_AVAILABILITY_MODIFIERS: ModifierRule[] = [
+  {
+    prefix: 'A',
+    description: 'Airline filter (confirmed)',
+    status: 'CONFIRMED',
+    example: '/AP4 or /AP4,W3',
+    parse: (val: string, opts: ParsedAvailabilityModifiers) => {
+      const codes = val.split(',').map((c) => c.trim().toUpperCase()).filter(Boolean);
+      if (!opts.airlines) opts.airlines = [];
+      opts.airlines.push(...codes);
+    },
+  },
+  {
+    prefix: 'C',
+    description: 'Class of service filter',
+    status: 'VERIFY',
+    example: '/CY',
+    parse: (val: string, opts: ParsedAvailabilityModifiers) => {
+      opts.classCode = val.trim().toUpperCase();
+    },
+  },
+  {
+    prefix: 'D',
+    description: 'Direct flights only',
+    status: 'VERIFY',
+    example: '/D',
+    parse: (_val: string, opts: ParsedAvailabilityModifiers) => {
+      opts.directOnly = true;
+    },
+  },
+  {
+    prefix: 'N',
+    description: 'Non-stop flights only',
+    status: 'VERIFY',
+    example: '/N',
+    parse: (_val: string, opts: ParsedAvailabilityModifiers) => {
+      opts.nonStopOnly = true;
+    },
+  },
+];
+
+/**
+ * Split availability entry after core query on "/" and parse each modifier.
+ * Tolerates spaces: "/A P4" or "/AP4,W3" or "/AP4/AW3".
+ */
+export function parseAvailabilityModifiers(modifierString: string): ParsedAvailabilityModifiers {
+  const result: ParsedAvailabilityModifiers = { errors: [] };
+  if (!modifierString || !modifierString.trim()) {
+    return result;
+  }
+
+  // Split on "/"
+  const parts = modifierString
+    .split('/')
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  for (const part of parts) {
+    const cleanPart = part.replace(/\s+/g, '');
+    const prefix = cleanPart.charAt(0).toUpperCase();
+    const value = cleanPart.substring(1);
+
+    const rule = AMADEUS_AVAILABILITY_MODIFIERS.find((m) => m.prefix === prefix);
+    if (!rule) {
+      result.errors.push(`INVALID MODIFIER: /${part}`);
+      continue;
+    }
+
+    rule.parse(value, result);
+  }
+
+  return result;
+}
+
+// ─── Amadeus Mapping Table ───────────────────────────────────
 export const AMADEUS_COMMAND_MAP: Record<
   string,
   { sabre: string; amadeus: string; description: string }
