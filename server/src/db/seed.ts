@@ -464,8 +464,8 @@ export function seedDatabase(targetDb?: DatabaseType | string): void {
     }
 
     // 6. Queues & Queue Items
-    db.prepare('DELETE FROM queues').run();
     db.prepare('DELETE FROM queue_items').run();
+    db.prepare('DELETE FROM queues').run();
 
     const insertQueue = db.prepare('INSERT OR REPLACE INTO queues (queue_number, name, description) VALUES (?, ?, ?)');
     insertQueue.run(1, 'GENERAL', 'General incoming messages and schedule alerts');

@@ -144,4 +144,15 @@ describe('Amadeus Modifications, Pricing & Ticketing (Milestone d)', () => {
     expect(res.output).toContain('ELECTRONIC TICKET RECORD');
     expect(res.output).toContain('OPEN FOR USE');
   });
+
+  it('issues e-tickets with authentic numeric prefixes from AIRLINE_TICKET_PREFIXES (AW: 394, 9J: 086)', () => {
+    let res = executeCommand(state, 'NM1SMITH/JOHN MR', store);
+    res = executeCommand(res.newState, 'SSAW201Y15MARLOSABV1', store);
+    res = executeCommand(res.newState, 'APLOS 08012345678', store);
+    res = executeCommand(res.newState, 'TKOK', store);
+    res = executeCommand(res.newState, 'RF JOHN', store);
+    res = executeCommand(res.newState, 'FXP', store);
+    res = executeCommand(res.newState, 'TTP', store);
+    expect(res.output).toMatch(/394-\d{10}/);
+  });
 });

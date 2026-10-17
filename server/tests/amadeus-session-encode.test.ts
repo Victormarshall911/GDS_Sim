@@ -83,6 +83,22 @@ describe('Amadeus Session & Encode/Decode (Milestone a)', () => {
     // DNA EMIRATES -> EK
     res = executeCommand(state, 'DNA EMIRATES', store);
     expect(res.output).toContain('EK');
+
+    // DNA AW -> AFRICA WORLD AIRLINES
+    res = executeCommand(state, 'DNA AW', store);
+    expect(res.output).toContain('AFRICA WORLD AIRLINES');
+
+    // DNA AFRICA WORLD -> AW
+    res = executeCommand(state, 'DNA AFRICA WORLD', store);
+    expect(res.output).toContain('AW');
+
+    // DNA 9J -> DANA AIR
+    res = executeCommand(state, 'DNA 9J', store);
+    expect(res.output).toContain('DANA AIR');
+
+    // DNA DANA -> 9J
+    res = executeCommand(state, 'DNA DANA', store);
+    expect(res.output).toContain('9J');
   });
 
   it('encodes and decodes countries (DC)', () => {
