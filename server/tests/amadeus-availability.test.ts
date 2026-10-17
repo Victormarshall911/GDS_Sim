@@ -86,4 +86,87 @@ describe('Amadeus Availability & Modifier Parser (Section 0)', () => {
 
     expect(result.output).toContain('INVALID MODIFIER');
   });
+
+  describe('Return Availability (ACR / AR)', () => {
+    it('AN19OCTLOSABV/AP4 then ACR20NOV shows ABV-LOS on 20NOV, P4 only', () => {
+      const state = createInitialSessionState('amadeus');
+      const res1 = executeCommand(state, 'AN19OCTLOSABV/AP4', store);
+      expect(res1.newState.lastAvailability?.origin).toBe('LOS');
+      expect(res1.newState.lastAvailability?.destination).toBe('ABV');
+
+      const res2 = executeCommand(res1.newState, 'ACR20NOV', store);
+      expect(res2.output).toContain('20NOV ABV-LOS');
+      expect(res2.newState.lastAvailability?.origin).toBe('ABV');
+      expect(res2.newState.lastAvailability?.destination).toBe('LOS');
+      expect(res2.newState.lastAvailability?.lines.every((l) => l.airlineCode === 'P4')).toBe(true);
+    });
+
+    it('Then SS1Y1 gives a 2-segment itinerary: LOS-ABV then ABV-LOS', () => {
+      const state = createInitialSessionState('amadeus');
+      let res = executeCommand(state, 'AN19OCTLOSABV/AP4', store);
+      res = executeCommand(res.newState, 'SS1Y1', store);
+      expect(res.newState.workingPnr?.segments.length).toBe(1);
+      expect(res.newState.workingPnr?.segments[0].origin).toBe('LOS');
+      expect(res.newState.workingPnr?.segments[0].destination).toBe('ABV');
+
+      res = executeCommand(res.newState, 'ACR20NOV', store);
+      res = executeCommand(res.newState, 'SS1Y1', store);
+      expect(res.newState.workingPnr?.segments.length).toBe(2);
+      expect(res.newState.workingPnr?.segments[1].origin).toBe('ABV');
+      expect(res.newState.workingPnr?.segments[1].destination).toBe('LOS');
+    });
+
+    it('ACR20NOV/AW3 overrides the filter', () => {
+      const state = createInitialSessionState('amadeus');
+      let res = executeCommand(state, 'AN19OCTLOSABV/AP4', store);
+      res = executeCommand(res.newState, 'ACR20NOV/AW3', store);
+      expect(res.output).toContain('20NOV ABV-LOS');
+      expect(res.newState.lastAvailability?.origin).toBe('ABV');
+      expect(res.newState.lastAvailability?.destination).toBe('LOS');
+      expect(res.newState.lastAvailability?.lines.every((l) => l.airlineCode === 'W3')).toBe(true);
+    });
+
+    it('ACR with no prior availability returns the error', () => {
+      const state = createInitialSessionState('amadeus');
+      const res = executeCommand(state, 'ACR20NOV', store);
+      expect(res.output).toContain('NEED AVAILABILITY DISPLAY');
+    });
+
+    it('ACR twice flips back to LOS-ABV', () => {
+      const state = createInitialSessionState('amadeus');
+      let res = executeCommand(state, 'AN19OCTLOSABV/AP4', store);
+      res = executeCommand(res.newState, 'ACR20NOV', store);
+      expect(res.newState.lastAvailability?.origin).toBe('ABV');
+      expect(res.newState.lastAvailability?.destination).toBe('LOS');
+
+      res = executeCommand(res.newState, 'ACR25NOV', store);
+      expect(res.newState.lastAvailability?.origin).toBe('LOS');
+      expect(res.newState.lastAvailability?.destination).toBe('ABV');
+      expect(res.output).toContain('25NOV LOS-ABV');
+    });
+
+    it('lowercase and spaced input works (acr 20nov, ar 20nov)', () => {
+      const state = createInitialSessionState('amadeus');
+      let res = executeCommand(state, 'an 19oct los abv /a p4', store);
+      res = executeCommand(res.newState, 'acr 20nov', store);
+      expect(res.newState.lastAvailability?.origin).toBe('ABV');
+      expect(res.newState.lastAvailability?.destination).toBe('LOS');
+
+      res = executeCommand(res.newState, 'ar 22nov', store);
+      expect(res.newState.lastAvailability?.origin).toBe('LOS');
+      expect(res.newState.lastAvailability?.destination).toBe('ABV');
+    });
+
+    it('AC20NOV still only changes the date', () => {
+      const state = createInitialSessionState('amadeus');
+      let res = executeCommand(state, 'AN19OCTLOSABV', store);
+      expect(res.newState.lastAvailability?.origin).toBe('LOS');
+      expect(res.newState.lastAvailability?.destination).toBe('ABV');
+
+      res = executeCommand(res.newState, 'AC20NOV', store);
+      expect(res.output).toContain('20NOV LOS-ABV');
+      expect(res.newState.lastAvailability?.origin).toBe('LOS');
+      expect(res.newState.lastAvailability?.destination).toBe('ABV');
+    });
+  });
 });

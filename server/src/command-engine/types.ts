@@ -62,6 +62,7 @@ export interface AvailabilityResult {
   destination: string;
   date: string;
   lines: AvailabilityLine[];
+  modifiersStr?: string;
 }
 
 // ─── Practice Mode ────────────────────────────────────────────
