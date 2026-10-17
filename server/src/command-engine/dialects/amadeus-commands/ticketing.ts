@@ -1,23 +1,14 @@
 import type { SessionState, CommandResult, DataStore, ETicketRecord } from '../../types';
 import { formatDateSabre } from '../../format';
-import { AMADEUS_CONFIG } from '../../command-config';
+import { AMADEUS_CONFIG, AIRLINE_TICKET_PREFIXES } from '../../command-config';
 import { formatAmadeusPnr } from './pnr';
-
-const AIRLINE_PREFIXES: Record<string, string> = {
-  AI: '098',
-  P4: '240',
-  W3: '725',
-  BA: '125',
-  AW: '215',
-  EK: '176',
-  QR: '157',
-};
 
 /**
  * Generate 13-digit e-ticket number: e.g. 098-1234567890
  */
 function generateTicketNumber(airlineCode: string): string {
-  const prefix = AIRLINE_PREFIXES[airlineCode.toUpperCase()] || '999';
+  const entry = AIRLINE_TICKET_PREFIXES[airlineCode.toUpperCase()];
+  const prefix = entry ? entry.numeric : '999';
   const digits = Math.floor(1000000000 + Math.random() * 9000000000).toString();
   return `${prefix}-${digits}`;
 }

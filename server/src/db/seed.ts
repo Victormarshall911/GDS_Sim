@@ -122,7 +122,8 @@ export function seedDatabase(targetDb?: DatabaseType | string): void {
       ['OF', 'Overland Airways', '830'],
       ['UN', 'United Nigeria Airlines', '840'],
       ['VM', 'Max Air', '850'],
-      ['AW', 'Dana Air', '999'],
+      ['AW', 'Africa World Airlines', '394'],
+      ['9J', 'Dana Air', '086'],
       ['AI', 'Air India', '098'],
       ['BA', 'British Airways', '125'],
       ['VS', 'Virgin Atlantic', '932'],
@@ -254,6 +255,9 @@ export function seedDatabase(targetDb?: DatabaseType | string): void {
       // ABV - LOS additional flights
       { airline: 'AW', flightNum: 202, orig: 'ABV', dest: 'LOS', dep: '13:30', arr: '14:45', ac: '738', days: '1234567' },
       { airline: 'AW', flightNum: 206, orig: 'ABV', dest: 'LOS', dep: '18:30', arr: '19:45', ac: '738', days: '1234567' },
+      // Dana Air (9J) domestic
+      { airline: '9J', flightNum: 350, orig: 'LOS', dest: 'ABV', dep: '09:15', arr: '10:30', ac: 'M88', days: '1234567' },
+      { airline: '9J', flightNum: 351, orig: 'ABV', dest: 'LOS', dep: '11:30', arr: '12:45', ac: 'M88', days: '1234567' },
       // ABV - PHC
       { airline: 'P4', flightNum: 7170, orig: 'ABV', dest: 'PHC', dep: '09:00', arr: '10:05', ac: '738', days: '1234567' },
       { airline: 'W3', flightNum: 560, orig: 'ABV', dest: 'PHC', dep: '14:00', arr: '15:05', ac: '738', days: '1234567' },
@@ -322,6 +326,14 @@ export function seedDatabase(targetDb?: DatabaseType | string): void {
       { orig: 'ABV', dest: 'LOS', airline: 'P4', class: 'Y', ngn: 9000000, usd: 5600, basis: 'YOWNG', pax: 'ADT' },
       { orig: 'ABV', dest: 'LOS', airline: 'P4', class: 'B', ngn: 8000000, usd: 5000, basis: 'BOWNG', pax: 'ADT' },
       { orig: 'ABV', dest: 'LOS', airline: 'P4', class: 'J', ngn: 20000000, usd: 12500, basis: 'JOWNG', pax: 'ADT' },
+
+      // Domestic LOS <-> ABV (AW - Africa World Airlines)
+      { orig: 'LOS', dest: 'ABV', airline: 'AW', class: 'Y', ngn: 8900000, usd: 5550, basis: 'YOWNG', pax: 'ADT' },
+      { orig: 'ABV', dest: 'LOS', airline: 'AW', class: 'Y', ngn: 8900000, usd: 5550, basis: 'YOWNG', pax: 'ADT' },
+
+      // Domestic LOS <-> ABV (9J - Dana Air)
+      { orig: 'LOS', dest: 'ABV', airline: '9J', class: 'Y', ngn: 8800000, usd: 5500, basis: 'YOWNG', pax: 'ADT' },
+      { orig: 'ABV', dest: 'LOS', airline: '9J', class: 'Y', ngn: 8800000, usd: 5500, basis: 'YOWNG', pax: 'ADT' },
 
       // Domestic LOS <-> PHC
       { orig: 'LOS', dest: 'PHC', airline: 'P4', class: 'Y', ngn: 9800000, usd: 6100, basis: 'YOWNG', pax: 'ADT' },

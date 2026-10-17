@@ -279,6 +279,40 @@ export const AMADEUS_CONFIG = {
   ],
 };
 
+export interface AirlineTicketPrefix {
+  code: string;
+  name: string;
+  numeric: string;
+  status: 'CONFIRMED' | 'VERIFY';
+}
+
+/**
+ * AIRLINE 3-DIGIT TICKET PREFIX TABLE
+ * Used for issuing 13-digit e-tickets (<prefix>-<10 digits>).
+ * Marked as VERIFY until confirmed against production GDS/IATA tables.
+ */
+export const AIRLINE_TICKET_PREFIXES: Record<string, AirlineTicketPrefix> = {
+  P4: { code: 'P4', name: 'Air Peace', numeric: '240', status: 'VERIFY' },
+  W3: { code: 'W3', name: 'Arik Air', numeric: '725', status: 'VERIFY' },
+  '9J': { code: '9J', name: 'Dana Air', numeric: '086', status: 'VERIFY' },
+  AW: { code: 'AW', name: 'Africa World Airlines', numeric: '394', status: 'VERIFY' },
+  QI: { code: 'QI', name: 'Ibom Air', numeric: '820', status: 'VERIFY' },
+  OF: { code: 'OF', name: 'Overland Airways', numeric: '830', status: 'VERIFY' },
+  UN: { code: 'UN', name: 'United Nigeria Airlines', numeric: '840', status: 'VERIFY' },
+  VM: { code: 'VM', name: 'Max Air', numeric: '850', status: 'VERIFY' },
+  AI: { code: 'AI', name: 'Air India', numeric: '098', status: 'VERIFY' },
+  BA: { code: 'BA', name: 'British Airways', numeric: '125', status: 'VERIFY' },
+  VS: { code: 'VS', name: 'Virgin Atlantic', numeric: '932', status: 'VERIFY' },
+  EK: { code: 'EK', name: 'Emirates', numeric: '176', status: 'VERIFY' },
+  QR: { code: 'QR', name: 'Qatar Airways', numeric: '157', status: 'VERIFY' },
+  DL: { code: 'DL', name: 'Delta Air Lines', numeric: '006', status: 'VERIFY' },
+  AF: { code: 'AF', name: 'Air France', numeric: '057', status: 'VERIFY' },
+  LH: { code: 'LH', name: 'Lufthansa', numeric: '220', status: 'VERIFY' },
+  ET: { code: 'ET', name: 'Ethiopian Airlines', numeric: '071', status: 'VERIFY' },
+  KQ: { code: 'KQ', name: 'Kenya Airways', numeric: '706', status: 'VERIFY' },
+  TK: { code: 'TK', name: 'Turkish Airlines', numeric: '235', status: 'VERIFY' },
+};
+
 export const AMADEUS_COMMANDS = {
   // Session
   SIGN_IN: {
