@@ -1,0 +1,21 @@
+{
+  "name": "sabre-sim",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n SERVER,CLIENT -c cyan,green \"npm run dev -w server\" \"npm run dev -w client\"",
+    "test": "npm run test -w server",
+    "build": "npm run build -w server && npm run build -w client",
+    "seed": "npm run seed -w server",
+    "setup": "npm install && npm run seed"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.6.0"
+  }
+}

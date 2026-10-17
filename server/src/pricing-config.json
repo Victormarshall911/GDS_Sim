@@ -1,0 +1,29 @@
+{
+  "currency": {
+    "base": "NGN",
+    "rates": {
+      "NGN": 1,
+      "USD": 1600.0,
+      "GBP": 2080.0,
+      "EUR": 1740.0
+    }
+  },
+  "fuelSurcharges": {
+    "YQ_DOMESTIC_NGN": 25000,
+    "YQ_REGIONAL_NGN": 55000,
+    "YQ_INTERNATIONAL_NGN": 120000,
+    "YQ_INTERNATIONAL_USD": 75
+  },
+  "taxes": {
+    "passengerServiceChargeNGN": 15000,
+    "securityChargeNGN": 5000,
+    "vatPercentage": 0.075,
+    "internationalDepartureTaxUSD": 50,
+    "ukPassengerDutyGBP": 88
+  },
+  "discounts": {
+    "ADT": 1.0,
+    "CHD": 0.75,
+    "INF": 0.10
+  }
+}
