@@ -6,6 +6,7 @@ import { PracticePanel } from './components/PracticePanel';
 import { PricingModal } from './components/PricingModal';
 import { useTerminal } from './hooks/useTerminal';
 import { executeCommand, getSession, resetSession } from './api';
+import { DEFAULT_AGENT } from '@sabre-sim/shared';
 import { BookOpen, Award, Sliders, RefreshCw, Monitor, Palette } from 'lucide-react';
 import './styles/terminal.css';
 
@@ -14,16 +15,19 @@ export const App: React.FC = () => {
     entries,
     pushCommand,
     clearEntries,
+    resetTerminal,
     getPreviousHistory,
     getNextHistory,
   } = useTerminal();
 
   const [inputValue, setInputValue] = useState<string>('');
-  const [signedIn, setSignedIn] = useState<boolean>(false);
-  const [agentId, setAgentId] = useState<string | null>(null);
+  const [signedIn, setSignedIn] = useState<boolean>(true);
+  const [agentId, setAgentId] = useState<string | null>(DEFAULT_AGENT?.agentId || '7890');
+  const [pcc, setPcc] = useState<string>(DEFAULT_AGENT?.pcc || 'LOS01');
   const [dialect, setDialect] = useState<'sabre' | 'amadeus'>('sabre');
   const [currentPnr, setCurrentPnr] = useState<string | null>(null);
   const [hasWorkingPnr, setHasWorkingPnr] = useState<boolean>(false);
+  const [uppercaseMode, setUppercaseMode] = useState<boolean>(true);
 
   // UI state
   const [showCheatSheet, setShowCheatSheet] = useState<boolean>(false);
@@ -41,6 +45,7 @@ export const App: React.FC = () => {
         setDialect(data.dialect);
         setCurrentPnr(data.currentPnr);
         setHasWorkingPnr(data.hasWorkingPnr);
+        if (data.pcc) setPcc(data.pcc);
       })
       .catch(() => {});
   }, []);
@@ -73,6 +78,7 @@ export const App: React.FC = () => {
         setDialect(res.dialect);
         setCurrentPnr(res.currentPnr);
         setHasWorkingPnr(res.hasWorkingPnr);
+        if (res.pcc) setPcc(res.pcc);
       } catch (err: any) {
         pushCommand(trimmed, `SYSTEM COMMUNICATION ERROR: ${err.message || 'Server unreachable'}`);
       }
@@ -98,12 +104,13 @@ export const App: React.FC = () => {
     if (window.confirm('Reset terminal session and clear current working PNR?')) {
       try {
         const res = await resetSession();
-        setSignedIn(false);
-        setAgentId(null);
-        setDialect('sabre');
+        setSignedIn(res.signedIn);
+        setAgentId(res.agentId);
+        setDialect(res.dialect);
         setCurrentPnr(null);
         setHasWorkingPnr(false);
-        pushCommand('RESET', res.output);
+        if (res.pcc) setPcc(res.pcc);
+        resetTerminal();
       } catch {
         alert('Failed to reset session');
       }
@@ -177,6 +184,14 @@ export const App: React.FC = () => {
           </button>
 
           <button
+            className={`nav-btn ${uppercaseMode ? 'active' : ''}`}
+            onClick={() => setUppercaseMode(!uppercaseMode)}
+            title="Toggle Uppercase Input Mode"
+          >
+            <span>{uppercaseMode ? 'CAPS' : 'caps'}</span>
+          </button>
+
+          <button
             className={`nav-btn ${crtEffect ? 'active' : ''}`}
             onClick={() => setCrtEffect(!crtEffect)}
             title="Toggle CRT Scanlines"
@@ -214,6 +229,7 @@ export const App: React.FC = () => {
           onSubmit={handleExecute}
           onArrowUp={handleArrowUp}
           onArrowDown={handleArrowDown}
+          uppercaseMode={uppercaseMode}
         />
 
         <CheatSheet
@@ -245,6 +261,7 @@ export const App: React.FC = () => {
         dialect={dialect}
         currentPnr={currentPnr}
         hasWorkingPnr={hasWorkingPnr}
+        pcc={pcc}
       />
     </div>
   );

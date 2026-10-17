@@ -9,7 +9,9 @@
   ],
   "scripts": {
     "dev": "concurrently -k -n SERVER,CLIENT -c cyan,green \"npm run dev -w server\" \"npm run dev -w client\"",
-    "test": "npm run test -w server",
+    "test": "npm run test -w server && npm run test -w client",
+    "test:server": "npm run test -w server",
+    "test:client": "npm run test -w client",
     "build": "npm run build -w server && npm run build -w client",
     "seed": "npm run seed -w server",
     "setup": "npm install && npm run seed"
