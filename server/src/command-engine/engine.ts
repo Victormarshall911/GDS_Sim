@@ -2,6 +2,7 @@ import type { SessionState, CommandResult, DataStore } from './types';
 import type { Dialect } from './dialects/interface';
 import { SabreDialect } from './dialects/sabre';
 import { AmadeusDialect } from './dialects/amadeus';
+import { DEFAULT_AGENT } from './command-config';
 import type { DialectName } from '@sabre-sim/shared';
 
 const dialects: Record<DialectName, Dialect> = {
@@ -11,11 +12,15 @@ const dialects: Record<DialectName, Dialect> = {
 
 /**
  * Creates a clean initial session state.
+ * By default, every new session starts already signed in with the configured default agent.
  */
-export function createInitialSessionState(dialect: DialectName = 'sabre'): SessionState {
+export function createInitialSessionState(
+  dialect: DialectName = 'sabre',
+  autoSignIn: boolean = true
+): SessionState {
   return {
-    agentId: null,
-    signedIn: false,
+    agentId: autoSignIn ? DEFAULT_AGENT.agentId : null,
+    signedIn: autoSignIn,
     dialect,
     workingPnr: null,
     lastAvailability: null,

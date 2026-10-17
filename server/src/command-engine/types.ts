@@ -205,5 +205,7 @@ export interface DataStore {
   getFare(airlineCode: string, origin: string, destination: string, classCode: string, paxType?: string): FareRecord | null;
   logCommand(sessionId: string, input: string, output: string): void;
   savePracticeAttempt(sessionId: string, scenarioId: string, score: number, feedback: string): void;
+  saveSession?(sessionId: string, state: SessionState): void;
+  getSession?(sessionId: string): SessionState | null;
 }
 

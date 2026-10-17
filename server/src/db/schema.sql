@@ -119,7 +119,14 @@ CREATE TABLE IF NOT EXISTS practice_attempts (
   feedback TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS active_sessions (
+  session_id TEXT PRIMARY KEY,
+  state_json TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_flights_route ON flights(origin, destination);
 CREATE INDEX IF NOT EXISTS idx_flight_classes_flight ON flight_classes(flight_id);
 CREATE INDEX IF NOT EXISTS idx_pnr_segments_locator ON pnr_segments(pnr_locator);
 CREATE INDEX IF NOT EXISTS idx_pnr_passengers_locator ON pnr_passengers(pnr_locator);
+

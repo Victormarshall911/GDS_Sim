@@ -6,6 +6,7 @@ interface StatusBarProps {
   dialect: 'sabre' | 'amadeus';
   currentPnr: string | null;
   hasWorkingPnr: boolean;
+  pcc?: string;
 }
 
 export const StatusBar: React.FC<StatusBarProps> = ({
@@ -14,6 +15,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   dialect,
   currentPnr,
   hasWorkingPnr,
+  pcc = 'LOS01',
 }) => {
   const [timeStr, setTimeStr] = useState<string>('');
 
@@ -42,7 +44,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         <div className="status-item">
           <span>AGENT:</span>
           <span className="status-value">
-            {signedIn ? `${agentId} (SIGNED IN)` : 'NOT SIGNED IN'}
+            {signedIn && agentId ? agentId : 'NOT SIGNED IN'}
           </span>
         </div>
 
@@ -57,7 +59,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       <div className="status-right">
         <div className="status-item">
           <span>PCC:</span>
-          <span className="status-value">LOS01</span>
+          <span className="status-value">{pcc}</span>
         </div>
         <div className="status-item">
           <span>SYS TIME:</span>

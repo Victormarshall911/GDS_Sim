@@ -8,6 +8,7 @@ import type {
   SavedPnrRecord,
   PassengerEntry,
   SegmentEntry,
+  SessionState,
 } from '../command-engine/types';
 
 export class SqliteDataStore implements DataStore {
@@ -319,5 +320,32 @@ export class SqliteDataStore implements DataStore {
     } catch {
       // Ignore practice recording failure
     }
+  }
+
+  saveSession(sessionId: string, state: SessionState): void {
+    try {
+      this.db
+        .prepare(
+          `INSERT OR REPLACE INTO active_sessions (session_id, state_json, updated_at)
+           VALUES (?, ?, datetime('now'))`
+        )
+        .run(sessionId, JSON.stringify(state));
+    } catch {
+      // Ignore session save failure
+    }
+  }
+
+  getSession(sessionId: string): SessionState | null {
+    try {
+      const row = this.db
+        .prepare('SELECT state_json FROM active_sessions WHERE session_id = ?')
+        .get(sessionId) as { state_json: string } | undefined;
+      if (row?.state_json) {
+        return JSON.parse(row.state_json) as SessionState;
+      }
+    } catch {
+      // Ignore session read failure
+    }
+    return null;
   }
 }

@@ -7,6 +7,16 @@
  * If a command on your live Sabre screen behaves differently,
  * update the pattern here — the handler code stays the same.
  */
+/**
+ * DEFAULT AGENT CONFIGURATION
+ * ===========================
+ * Configure the default agent ID and home PCC for the simulator.
+ * Can be overridden via DEFAULT_AGENT_ID and DEFAULT_PCC environment variables.
+ */
+export const DEFAULT_AGENT = {
+  agentId: process.env.DEFAULT_AGENT_ID || '7890',
+  pcc: process.env.DEFAULT_PCC || 'LOS01',
+};
 
 export const SABRE_COMMANDS = {
   // ─── Sign In / Sign Out ─────────────────────────────────────

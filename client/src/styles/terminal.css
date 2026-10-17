@@ -236,33 +236,95 @@ html, body {
   text-shadow: 0 0 4px var(--term-green-glow);
 }
 
-/* Live Active Command Input */
+/* Live Active Command Input - Inline Monospace Caret */
 .active-input-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: baseline;
+  position: relative;
   margin-top: 8px;
-}
-
-.terminal-input-field {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: #ffffff;
   font-family: var(--term-font);
   font-size: 16px;
-  letter-spacing: 1px;
-  caret-color: transparent; /* custom cursor */
+  line-height: 1.5;
+  white-space: pre;
 }
 
-.blinking-cursor {
+.input-prompt-symbol {
+  color: var(--term-green);
+  user-select: none;
+  font-family: var(--term-font);
+  font-size: 16px;
+  font-weight: 700;
   display: inline-block;
-  width: 9px;
-  height: 18px;
+  white-space: pre;
+}
+
+.terminal-editor-container {
+  position: relative;
+  display: inline-block;
+  min-width: 2ch;
+  font-family: var(--term-font);
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  white-space: pre;
+}
+
+.terminal-hidden-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  z-index: 2;
+  font-family: var(--term-font);
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  padding: 0;
+  margin: 0;
+  white-space: pre;
+}
+
+.terminal-visible-line {
+  display: inline;
+  font-family: var(--term-font);
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  white-space: pre;
+  color: #ffffff;
+  pointer-events: none;
+}
+
+.text-before,
+.text-after {
+  white-space: pre;
+}
+
+.terminal-caret {
+  display: inline-block;
   background-color: var(--term-green);
+  color: var(--term-bg, #000000);
+  font-family: var(--term-font);
+  font-weight: 700;
+  white-space: pre;
+  min-width: 1ch;
+  text-align: center;
+  line-height: 1.2;
+  vertical-align: baseline;
+  box-shadow: 0 0 6px var(--term-green-glow);
+}
+
+.terminal-caret.blinking {
   animation: cursor-blink 1s step-end infinite;
-  vertical-align: middle;
+}
+
+.terminal-caret.solid {
+  animation: none;
+  opacity: 1;
 }
 
 @keyframes cursor-blink {

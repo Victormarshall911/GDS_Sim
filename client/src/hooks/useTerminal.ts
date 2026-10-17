@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { DEFAULT_AGENT } from '@sabre-sim/shared';
 
 export interface TerminalEntry {
   id: string;
@@ -7,33 +8,36 @@ export interface TerminalEntry {
   timestamp: string;
 }
 
-export function useTerminal() {
-  const [entries, setEntries] = useState<TerminalEntry[]>([
-    {
-      id: 'welcome',
-      type: 'system',
-      content: [
-        'SABRE GDS TERMINAL SIMULATOR  —  TRAINING EDITION (NIGERIA)',
-        '═══════════════════════════════════════════════════════════════════════════════',
-        'SYSTEM READY. AREA A  HOME PCC: LOS01  DATE: ' + new Date().toDateString().toUpperCase(),
-        '',
-        'QUICK START:',
-        '  1. Sign in:                   SI*7890',
-        '  2. Check flight availability: 1LOSLHR15NOV',
-        '  3. Sell seat from line 1:     01Y1',
-        '  4. Add passenger name:        -SMITH/JOHN MR',
-        '  5. Add agency phone:          9234-802-123-4567-A',
-        '  6. Add ticketing arrangement: 7TAW/',
-        '  7. Add received from:         6SMITH',
-        '  8. End and save PNR:          ER',
-        '',
-        'Type "HELP" at any time for the full command reference.',
-        '═══════════════════════════════════════════════════════════════════════════════',
-      ].join('\n'),
-      timestamp: new Date().toLocaleTimeString(),
-    },
-  ]);
+export function createWelcomeEntry(): TerminalEntry {
+  const agentId = DEFAULT_AGENT?.agentId || '7890';
+  const pcc = DEFAULT_AGENT?.pcc || 'LOS01';
+  return {
+    id: crypto.randomUUID(),
+    type: 'system',
+    content: [
+      'SABRE GDS TERMINAL SIMULATOR  —  TRAINING EDITION (NIGERIA)',
+      '═══════════════════════════════════════════════════════════════════════════════',
+      'SYSTEM READY. AREA A  HOME PCC: ' + pcc + '  DATE: ' + new Date().toDateString().toUpperCase(),
+      `SIGNED IN: AGENT ${agentId}  PCC ${pcc}`,
+      '',
+      'QUICK START:',
+      '  1. Check flight availability: 1LOSLHR15NOV',
+      '  2. Sell seat from line 1:     01Y1',
+      '  3. Add passenger name:        -SMITH/JOHN MR',
+      '  4. Add agency phone:          9234-802-123-4567-A',
+      '  5. Add ticketing arrangement: 7TAW/',
+      '  6. Add received from:         6SMITH',
+      '  7. End and save PNR:          ER',
+      '',
+      'Type "HELP" at any time for the full command reference.',
+      '═══════════════════════════════════════════════════════════════════════════════',
+    ].join('\n'),
+    timestamp: new Date().toLocaleTimeString(),
+  };
+}
 
+export function useTerminal() {
+  const [entries, setEntries] = useState<TerminalEntry[]>([createWelcomeEntry()]);
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
@@ -69,6 +73,12 @@ export function useTerminal() {
     setEntries([]);
   }, []);
 
+  const resetTerminal = useCallback(() => {
+    setEntries([createWelcomeEntry()]);
+    setHistory([]);
+    setHistoryIndex(-1);
+  }, []);
+
   const getPreviousHistory = useCallback((): string | null => {
     if (history.length === 0) return null;
     const newIdx = historyIndex === -1 ? history.length - 1 : Math.max(0, historyIndex - 1);
@@ -92,6 +102,7 @@ export function useTerminal() {
     addEntry,
     pushCommand,
     clearEntries,
+    resetTerminal,
     getPreviousHistory,
     getNextHistory,
   };

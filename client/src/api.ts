@@ -3,6 +3,7 @@ export interface ExecuteResponse {
   signedIn: boolean;
   agentId: string | null;
   dialect: 'sabre' | 'amadeus';
+  pcc?: string;
   currentPnr: string | null;
   hasWorkingPnr: boolean;
   pnrSummary?: {
@@ -19,6 +20,7 @@ export interface SessionResponse {
   signedIn: boolean;
   agentId: string | null;
   dialect: 'sabre' | 'amadeus';
+  pcc?: string;
   currentPnr: string | null;
   hasWorkingPnr: boolean;
 }

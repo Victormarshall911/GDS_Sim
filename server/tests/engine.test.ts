@@ -18,7 +18,7 @@ describe('Central Command Engine & Complete Booking Workflow', () => {
   });
 
   it('blocks transactional commands if agent is not signed in', () => {
-    const state = createInitialSessionState();
+    const state = createInitialSessionState('sabre', false);
     const result = executeCommand(state, '1LOSLHR15NOV', store);
 
     expect(result.output).toContain('SIGN IN REQUIRED');
