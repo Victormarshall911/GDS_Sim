@@ -112,12 +112,16 @@ export function getDayOfWeek(date: Date): string {
 export function formatPnrDisplay(pnr: {
   recordLocator?: string;
   passengers: Array<{
-    lastName: string;
-    firstName: string;
+    lastName?: string;
+    last_name?: string;
+    firstName?: string;
+    first_name?: string;
     title: string;
     paxType?: string;
+    pax_type?: string;
     dob?: string;
   }>;
+
   segments: Array<{
     airlineCode?: string;
     airline_code?: string;
