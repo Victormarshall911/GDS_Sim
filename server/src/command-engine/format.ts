@@ -148,12 +148,19 @@ export function formatPnrDisplay(pnr: {
   const locator = pnr.recordLocator ?? 'NO-LOC';
 
   // Header line: LOCATOR - 1.1 LAST/FIRST TITLE
-  const paxList = pnr.passengers.map((p, idx) => {
+  const paxList = pnr.passengers.map((p: any, idx) => {
+    const lastName = p.lastName ?? p.last_name ?? '';
+    const firstName = p.firstName ?? p.first_name ?? '';
+    const title = p.title ?? '';
+    const paxType = p.paxType ?? p.pax_type ?? 'ADT';
+    const dob = p.dob;
+
     let suffix = '';
-    if (p.paxType === 'CHD') suffix = p.dob ? `(CHD/${p.dob})` : '(CHD)';
-    if (p.paxType === 'INF') suffix = p.dob ? `(INF/${p.dob})` : '(INF)';
-    return `1.${idx + 1} ${p.lastName}/${p.firstName}${p.title ? ' ' + p.title : ''}${suffix}`;
+    if (paxType === 'CHD') suffix = dob ? `(CHD/${dob})` : '(CHD)';
+    if (paxType === 'INF') suffix = dob ? `(INF/${dob})` : '(INF)';
+    return `1.${idx + 1} ${lastName}/${firstName}${title ? ' ' + title : ''}${suffix}`;
   });
+
 
   if (paxList.length > 0) {
     lines.push(`${locator} - ${paxList[0]}`);

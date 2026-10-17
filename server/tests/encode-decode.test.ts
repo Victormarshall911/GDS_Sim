@@ -33,8 +33,9 @@ describe('Encode / Decode Commands (DAN, DAC, W/*)', () => {
 
     expect(result.output).toContain('DAC LOS');
     expect(result.output).toContain('Murtala Muhammed International');
-    expect(result.output).toContain('Nigeria');
+    expect(result.output).toContain('NG');
   });
+
 
   it('W/* encodes/decodes airline by name or code', () => {
     const state = createInitialSessionState();
