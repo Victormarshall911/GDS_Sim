@@ -1,7 +1,12 @@
 import { getDatabase } from './connection';
+import type { Database as DatabaseType } from 'better-sqlite3';
 
-export function seedDatabase(dbPath?: string): void {
-  const db = getDatabase(dbPath);
+export function seedDatabase(targetDb?: DatabaseType | string): void {
+  const db =
+    typeof targetDb === 'object' && targetDb !== null
+      ? targetDb
+      : getDatabase(typeof targetDb === 'string' ? targetDb : undefined);
+
 
   console.log('Seeding GDS Simulator database...');
 
