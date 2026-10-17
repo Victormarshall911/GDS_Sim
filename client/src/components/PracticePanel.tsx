@@ -1,22 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, AlertCircle, Award, PlayCircle } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, Award } from 'lucide-react';
 import { getScenarios, checkScenario, type ScenarioDefinition, type CheckScenarioResponse } from '../api';
 
 interface PracticePanelProps {
   isOpen: boolean;
   onClose: () => void;
   onExecutePrompt?: (cmd: string) => void;
+  dialect?: 'sabre' | 'amadeus';
 }
 
 export const PracticePanel: React.FC<PracticePanelProps> = ({
   isOpen,
   onClose,
   onExecutePrompt,
+  dialect = 'sabre',
 }) => {
   const [scenarios, setScenarios] = useState<ScenarioDefinition[]>([]);
-  const [selectedId, setSelectedId] = useState<string>('solo-lagos-london');
+  const [selectedId, setSelectedId] = useState<string>('');
+  const [filterDialect, setFilterDialect] = useState<'all' | 'sabre' | 'amadeus'>(dialect);
   const [loading, setLoading] = useState<boolean>(false);
   const [checkResult, setCheckResult] = useState<CheckScenarioResponse | null>(null);
+
+  useEffect(() => {
+    setFilterDialect(dialect);
+  }, [dialect]);
 
   useEffect(() => {
     if (isOpen) {
@@ -24,16 +31,22 @@ export const PracticePanel: React.FC<PracticePanelProps> = ({
         .then((data) => {
           if (data && data.length > 0) {
             setScenarios(data);
-            if (!selectedId) setSelectedId(data[0].id);
+            // Default to first scenario matching current dialect
+            const firstMatch = data.find((s) => s.dialect === dialect) ?? data[0];
+            setSelectedId(firstMatch.id);
           }
         })
-        .catch(() => {
-          // fallback scenario data handled gracefully
-        });
+        .catch(() => {});
     }
-  }, [isOpen]);
+  }, [isOpen, dialect]);
 
-  const activeScenario = scenarios.find((s) => s.id === selectedId) ?? scenarios[0];
+  const displayedScenarios =
+    filterDialect === 'all'
+      ? scenarios
+      : scenarios.filter((s) => s.dialect === filterDialect || (!s.dialect && filterDialect === 'sabre'));
+
+  const activeScenario =
+    scenarios.find((s) => s.id === selectedId) ?? displayedScenarios[0] ?? scenarios[0];
 
   const handleEvaluate = async () => {
     if (!activeScenario) return;
@@ -55,7 +68,7 @@ export const PracticePanel: React.FC<PracticePanelProps> = ({
       <div className="drawer-header">
         <div className="drawer-title">
           <Award size={18} className="text-amber" />
-          <span>SIWES Practice Mode</span>
+          <span>SIWES Practice Mode ({dialect.toUpperCase()})</span>
         </div>
         <button className="drawer-close" onClick={onClose} aria-label="Close Practice Mode">
           <X size={18} />
@@ -63,13 +76,45 @@ export const PracticePanel: React.FC<PracticePanelProps> = ({
       </div>
 
       <div className="drawer-body">
-        <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '14px' }}>
+        <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '10px' }}>
           Select a realistic agency scenario, book it in the terminal, then click <strong>Evaluate My Booking</strong> for automatic SIWES grading.
         </p>
 
+        {/* Dialect Filter Tabs */}
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+          {(['amadeus', 'sabre', 'all'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              className={`nav-btn ${filterDialect === mode ? 'active' : ''}`}
+              style={{
+                fontSize: '11px',
+                padding: '3px 8px',
+                borderRadius: '4px',
+                textTransform: 'uppercase',
+                border: filterDialect === mode ? '1px solid var(--term-green)' : '1px solid var(--term-border)',
+                background: filterDialect === mode ? 'rgba(0, 255, 102, 0.15)' : 'transparent',
+                color: filterDialect === mode ? 'var(--term-green)' : '#9ca3af',
+                cursor: 'pointer',
+              }}
+              onClick={() => {
+                setFilterDialect(mode);
+                const nextMatch =
+                  mode === 'all'
+                    ? scenarios[0]
+                    : scenarios.find((s) => s.dialect === mode || (!s.dialect && mode === 'sabre'));
+                if (nextMatch) setSelectedId(nextMatch.id);
+                setCheckResult(null);
+              }}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
+
         {/* Scenario Selection Cards */}
         <div className="scenario-selector">
-          {scenarios.map((sc) => {
+          {displayedScenarios.map((sc) => {
             const isSelected = sc.id === activeScenario?.id;
             return (
               <div
@@ -101,6 +146,19 @@ export const PracticePanel: React.FC<PracticePanelProps> = ({
                   >
                     {sc.difficulty}
                   </span>
+                  {sc.dialect && (
+                    <span
+                      className="badge"
+                      style={{
+                        background: sc.dialect === 'amadeus' ? 'rgba(0, 229, 255, 0.15)' : 'rgba(255, 176, 0, 0.15)',
+                        color: sc.dialect === 'amadeus' ? '#00e5ff' : '#ffb000',
+                        fontSize: '9px',
+                        marginLeft: '4px',
+                      }}
+                    >
+                      {sc.dialect.toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 <div className="scenario-desc">{sc.description}</div>
               </div>

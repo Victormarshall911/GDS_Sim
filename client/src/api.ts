@@ -30,6 +30,7 @@ export interface ScenarioDefinition {
   title: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   description: string;
+  dialect?: 'sabre' | 'amadeus';
   expectedRoute: {
     origin: string;
     destination: string;

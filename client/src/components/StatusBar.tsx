@@ -58,7 +58,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
 
       <div className="status-right">
         <div className="status-item">
-          <span>PCC:</span>
+          <span>{dialect === 'amadeus' ? 'OFFICE:' : 'PCC:'}</span>
           <span className="status-value">{pcc}</span>
         </div>
         <div className="status-item">

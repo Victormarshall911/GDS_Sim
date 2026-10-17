@@ -8,9 +8,41 @@ export interface TerminalEntry {
   timestamp: string;
 }
 
-export function createWelcomeEntry(): TerminalEntry {
-  const agentId = DEFAULT_AGENT?.agentId || '7890';
-  const pcc = DEFAULT_AGENT?.pcc || 'LOS01';
+export function createWelcomeEntry(
+  dialect: 'sabre' | 'amadeus' = 'sabre',
+  customAgent?: string | null,
+  customPcc?: string | null
+): TerminalEntry {
+  if (dialect === 'amadeus') {
+    const agent = customAgent || '1234AA/SU';
+    const office = customPcc || 'LOS01';
+    return {
+      id: crypto.randomUUID(),
+      type: 'system',
+      content: [
+        'AMADEUS GDS TERMINAL SIMULATOR  —  TRAINING EDITION (NIGERIA)',
+        '═══════════════════════════════════════════════════════════════════════════════',
+        'SYSTEM READY. JUMPED IN. OFFICE: ' + office + '  DATE: ' + new Date().toDateString().toUpperCase(),
+        `SIGNED IN: AGENT ${agent}  OFFICE ${office}`,
+        '',
+        'QUICK START:',
+        '  1. Check flight availability: AN19OCTLOSABV/AP4',
+        '  2. Sell seat from line 1:     SS1Y1',
+        '  3. Add passenger name:        NM1SMITH/JOHN MR',
+        '  4. Add contact phone:         APLOS 08012345678',
+        '  5. Add ticketing arrangement: TKOK  or  TKTL20OCT/1800',
+        '  6. Add received from:         RF SMITH',
+        '  7. End and save PNR:          ER',
+        '',
+        'Type "HELP" at any time for the full command reference.',
+        '═══════════════════════════════════════════════════════════════════════════════',
+      ].join('\n'),
+      timestamp: new Date().toLocaleTimeString(),
+    };
+  }
+
+  const agentId = customAgent || DEFAULT_AGENT?.agentId || '7890';
+  const pcc = customPcc || DEFAULT_AGENT?.pcc || 'LOS01';
   return {
     id: crypto.randomUUID(),
     type: 'system',
@@ -36,8 +68,8 @@ export function createWelcomeEntry(): TerminalEntry {
   };
 }
 
-export function useTerminal() {
-  const [entries, setEntries] = useState<TerminalEntry[]>([createWelcomeEntry()]);
+export function useTerminal(initialDialect: 'sabre' | 'amadeus' = 'sabre') {
+  const [entries, setEntries] = useState<TerminalEntry[]>([createWelcomeEntry(initialDialect)]);
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
@@ -73,8 +105,8 @@ export function useTerminal() {
     setEntries([]);
   }, []);
 
-  const resetTerminal = useCallback(() => {
-    setEntries([createWelcomeEntry()]);
+  const resetTerminal = useCallback((dialect?: 'sabre' | 'amadeus', agent?: string | null, pcc?: string | null) => {
+    setEntries([createWelcomeEntry(dialect, agent, pcc)]);
     setHistory([]);
     setHistoryIndex(-1);
   }, []);

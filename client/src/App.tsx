@@ -46,9 +46,12 @@ export const App: React.FC = () => {
         setCurrentPnr(data.currentPnr);
         setHasWorkingPnr(data.hasWorkingPnr);
         if (data.pcc) setPcc(data.pcc);
+        if (data.dialect === 'amadeus') {
+          resetTerminal('amadeus', data.agentId, data.pcc);
+        }
       })
       .catch(() => {});
-  }, []);
+  }, [resetTerminal]);
 
   // Update theme on document root
   useEffect(() => {
@@ -110,7 +113,7 @@ export const App: React.FC = () => {
         setCurrentPnr(null);
         setHasWorkingPnr(false);
         if (res.pcc) setPcc(res.pcc);
-        resetTerminal();
+        resetTerminal(res.dialect, res.agentId, res.pcc);
       } catch {
         alert('Failed to reset session');
       }
@@ -135,7 +138,7 @@ export const App: React.FC = () => {
       {/* Navigation Header */}
       <header className="top-nav">
         <div className="brand-section">
-          <div className="brand-title">SABRE GDS SIMULATOR</div>
+          <div className="brand-title">{dialect.toUpperCase()} GDS SIMULATOR</div>
           <button
             className={`badge ${dialect === 'sabre' ? 'badge-sabre' : 'badge-amadeus'}`}
             onClick={toggleDialect}
@@ -230,6 +233,7 @@ export const App: React.FC = () => {
           onArrowUp={handleArrowUp}
           onArrowDown={handleArrowDown}
           uppercaseMode={uppercaseMode}
+          dialect={dialect}
         />
 
         <CheatSheet
@@ -238,6 +242,7 @@ export const App: React.FC = () => {
           onSelectCommand={(cmd) => {
             setInputValue(cmd);
           }}
+          dialect={dialect}
         />
 
         <PracticePanel
@@ -246,6 +251,7 @@ export const App: React.FC = () => {
           onExecutePrompt={(cmd) => {
             setInputValue(cmd);
           }}
+          dialect={dialect}
         />
 
         <PricingModal

@@ -61,7 +61,6 @@ export const Terminal: React.FC<TerminalProps> = ({
   const syncCaretFromInput = useCallback(() => {
     if (inputRef.current) {
       const pos = inputRef.current.selectionStart ?? inputRef.current.value.length;
-      console.log('syncCaretFromInput called, pos:', pos);
       setCaretPos(pos);
       resetBlinkTimer();
     }
@@ -140,10 +139,8 @@ export const Terminal: React.FC<TerminalProps> = ({
       return;
     }
 
-    console.log('KEY DOWN:', { key: e.key, code: e.code, dialect });
     // Backtick shortcut inserts ¥ for Sabre only
     if ((e.key === '`' || e.key === 'Backquote' || e.code === 'Backquote') && dialect !== 'amadeus') {
-      console.log('TRIGGERED BACKTICK INSERTION');
       e.preventDefault();
       insertCharacterAtCaret('¥');
       return;
@@ -203,7 +200,6 @@ export const Terminal: React.FC<TerminalProps> = ({
   const textBefore = inputValue.slice(0, safeCaret);
   const caretChar = inputValue[safeCaret] !== undefined ? inputValue[safeCaret] : ' ';
   const textAfter = inputValue.slice(safeCaret + 1);
-  console.log('Terminal RENDER:', { caretPos, inputValue, safeCaret, textBefore });
 
   return (
     <div

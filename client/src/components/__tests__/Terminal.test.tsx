@@ -10,7 +10,6 @@ function TerminalHarness(props: {
   dialect?: 'sabre' | 'amadeus';
 }) {
   const [val, setVal] = useState(props.initialValue ?? '');
-  console.log('TerminalHarness RENDER val:', val);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const history = props.history ?? ['1LOSLHR15NOV', '01Y1', '-DOE/JOHN MR'];
 
