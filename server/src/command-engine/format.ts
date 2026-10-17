@@ -105,3 +105,120 @@ export function toISODate(date: Date): string {
 export function getDayOfWeek(date: Date): string {
   return DAYS[date.getDay()];
 }
+
+/**
+ * Format a full PNR display according to standard Sabre layout.
+ */
+export function formatPnrDisplay(pnr: {
+  recordLocator?: string;
+  passengers: Array<{
+    lastName: string;
+    firstName: string;
+    title: string;
+    paxType?: string;
+    dob?: string;
+  }>;
+  segments: Array<{
+    airlineCode?: string;
+    airline_code?: string;
+    flightNumber?: number;
+    flight_number?: number;
+    classCode?: string;
+    class_code?: string;
+    travelDate?: string;
+    travel_date?: string;
+    origin: string;
+    destination: string;
+    departureTime?: string;
+    departure_time?: string;
+    arrivalTime?: string;
+    arrival_time?: string;
+    status: string;
+    numSeats?: number;
+    num_seats?: number;
+    aircraft?: string;
+  }>;
+  phone: string | null;
+  ticketing: string | null;
+  receivedFrom: string | null;
+  agentId?: string | null;
+  status?: string;
+}): string {
+  const lines: string[] = [];
+  const locator = pnr.recordLocator ?? 'NO-LOC';
+
+  // Header line: LOCATOR - 1.1 LAST/FIRST TITLE
+  const paxList = pnr.passengers.map((p, idx) => {
+    let suffix = '';
+    if (p.paxType === 'CHD') suffix = p.dob ? `(CHD/${p.dob})` : '(CHD)';
+    if (p.paxType === 'INF') suffix = p.dob ? `(INF/${p.dob})` : '(INF)';
+    return `1.${idx + 1} ${p.lastName}/${p.firstName}${p.title ? ' ' + p.title : ''}${suffix}`;
+  });
+
+  if (paxList.length > 0) {
+    lines.push(`${locator} - ${paxList[0]}`);
+    for (let i = 1; i < paxList.length; i++) {
+      lines.push(`          ${paxList[i]}`);
+    }
+  } else {
+    lines.push(`${locator} - NO PASSENGER NAMES`);
+  }
+
+  // Segments
+  if (pnr.segments.length > 0) {
+    pnr.segments.forEach((s, idx) => {
+      const segNum = (idx + 1).toString().padStart(2, ' ');
+      const airline = s.airlineCode ?? s.airline_code ?? '';
+      const flightNum = (s.flightNumber ?? s.flight_number ?? '').toString().padStart(4, ' ');
+      const cls = s.classCode ?? s.class_code ?? '';
+      const dateRaw = s.travelDate ?? s.travel_date ?? '';
+      const dateObj = new Date(`${dateRaw}T00:00:00`);
+      const sabreDate = isNaN(dateObj.getTime()) ? dateRaw : formatDateSabre(dateObj);
+      const origDest = `${s.origin}${s.destination}`;
+      const st = s.status;
+      const seats = s.numSeats ?? s.num_seats ?? 1;
+      const dep = formatTimeDisplay(s.departureTime ?? s.departure_time ?? '');
+      const arr = formatTimeDisplay(s.arrivalTime ?? s.arrival_time ?? '');
+
+      lines.push(`${segNum}  ${airline}${flightNum}${cls} ${sabreDate} ${origDest} ${st}${seats}  ${dep} ${arr} /E`);
+    });
+  } else {
+    lines.push('NO ITINERARY SEGMENTS');
+  }
+
+  // Ticketing
+  lines.push('TKT/TIME LIMIT');
+  if (pnr.ticketing) {
+    lines.push(`  1.${pnr.ticketing}`);
+  } else {
+    lines.push('  1.NONE');
+  }
+
+  // Phone
+  lines.push('PHONES');
+  if (pnr.phone) {
+    lines.push(`  1.${pnr.phone}`);
+  } else {
+    lines.push('  1.NONE');
+  }
+
+  // Received From
+  if (pnr.receivedFrom) {
+    lines.push(`RECEIVED FROM - ${pnr.receivedFrom}`);
+  }
+
+  if (pnr.status && pnr.status !== 'ACTIVE') {
+    lines.push(`STATUS - ${pnr.status}`);
+  }
+
+  // Footer
+  const now = new Date();
+  const time = formatTimeSabre(now);
+  const date = formatDateSabre(now);
+  const year = now.getFullYear().toString().substring(2);
+  const agent = pnr.agentId ?? '7890';
+  lines.push(`B${agent}.B${agent}*AAR ${time}/${date}${year} ${locator}`);
+
+  return lines.join('\n');
+}
+
