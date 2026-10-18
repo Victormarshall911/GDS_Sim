@@ -100,9 +100,9 @@ export function handleAmadeusIssueTickets(
       pax_name: working?.passengers[0]
         ? `${working.passengers[0].lastName}/${working.passengers[0].firstName}`
         : 'PASSENGER 1',
-      total_fare_ngn: t.total_fare_ngn,
-      validating_carrier: valCarrier,
-      issue_date: todayIso,
+      total_amount: t.total_fare_ngn,
+      airline_code: valCarrier,
+      issued_at: todayIso,
       status: 'OPEN',
     };
 
@@ -155,7 +155,7 @@ export function handleAmadeusIssueTickets(
   }
 
   return {
-    output: `OK ETICKETS ISSUED:\n${newETickets.map((t) => `  * TICKET: ${t.ticket_number} (${t.validating_carrier}) - STATUS: OPEN`).join('\n')}`,
+    output: `OK ETICKETS ISSUED:\n${newETickets.map((t) => `  * TICKET: ${t.ticket_number} (${t.airline_code}) - STATUS: OPEN`).join('\n')}`,
     newState: {
       ...state,
       eTickets: allETickets,
@@ -192,11 +192,11 @@ export function handleAmadeusDisplayETicket(
   const lines = [
     '------------------------------------------------------------',
     `ELECTRONIC TICKET RECORD: ${ticket.ticket_number}`,
-    `ISSUED: ${ticket.issue_date}   OFFICE: ${officeId}   AGENT: ${state.agentId || '1234AA'}`,
+    `ISSUED: ${ticket.issued_at}   OFFICE: ${officeId}   AGENT: ${state.agentId || '1234AA'}`,
     `PASSENGER: ${ticket.pax_name}`,
-    `VALIDATING CARRIER: ${ticket.validating_carrier}`,
+    `VALIDATING CARRIER: ${ticket.airline_code}`,
     `PAYMENT FORM:       ${fop}`,
-    `FARE TOTAL:         NGN ${ticket.total_fare_ngn}`,
+    `FARE TOTAL:         NGN ${ticket.total_amount}`,
     'COUPON 1: SEGM 1    STATUS: OPEN FOR USE',
     '------------------------------------------------------------',
   ];

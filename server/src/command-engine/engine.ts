@@ -50,7 +50,7 @@ export function executeCommand(
   const result = dialect.execute(input, state, store);
 
   if (sessionId && store.logCommand) {
-    store.logCommand(sessionId, input, result.output);
+    store.logCommand(sessionId, input, result.output, currentDialectName);
   }
 
   return result;

@@ -173,13 +173,10 @@ export interface ETicketRecord {
   ticket_number: string;
   pnr_locator: string;
   pax_name: string;
-  airline_code?: string;
-  total_amount?: number;
+  airline_code: string;
+  total_amount: number;
   status: string;
-  issued_at?: string;
-  validating_carrier?: string;
-  total_fare_ngn?: number;
-  issue_date?: string;
+  issued_at: string;
 }
 
 // ─── Command Result ───────────────────────────────────────────
@@ -295,7 +292,7 @@ export interface DataStore {
   cancelSegment(recordLocator: string, segmentNumber: number): boolean;
   isRecordLocatorUnique(locator: string): boolean;
   getFare(airlineCode: string, origin: string, destination: string, classCode: string, paxType?: string): FareRecord | null;
-  logCommand(sessionId: string, input: string, output: string): void;
+  logCommand(sessionId: string, input: string, output: string, dialect?: string): void;
   savePracticeAttempt(sessionId: string, scenarioId: string, score: number, feedback: string): void;
   saveSession?(sessionId: string, state: SessionState): void;
   getSession?(sessionId: string): SessionState | null;

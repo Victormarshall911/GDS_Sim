@@ -104,7 +104,7 @@ export function handleAmadeusEndTransaction(
       segments: confirmedSegments,
       phone: pnr!.phone,
       ticketing: pnr!.ticketing,
-      receivedFrom: pnr!.receivedFrom,
+      received_from: pnr!.receivedFrom,
       elements: state.pnrElements,
     },
     state
@@ -174,7 +174,7 @@ export function handleAmadeusIgnoreRetrieve(
       segments: pnr.segments,
       phone: pnr.phone,
       ticketing: pnr.ticketing,
-      receivedFrom: pnr.received_from,
+      received_from: pnr.received_from,
       elements,
     },
     { ...state, eTickets }
@@ -212,7 +212,7 @@ export function handleAmadeusRetrieve(
           segments: state.workingPnr.segments,
           phone: state.workingPnr.phone,
           ticketing: state.workingPnr.ticketing,
-          receivedFrom: state.workingPnr.receivedFrom,
+          received_from: state.workingPnr.receivedFrom,
           elements: state.pnrElements,
         },
         state
@@ -250,7 +250,7 @@ export function handleAmadeusRetrieve(
       segments: pnr.segments,
       phone: pnr.phone,
       ticketing: pnr.ticketing,
-      receivedFrom: pnr.received_from,
+      received_from: pnr.received_from,
       elements,
     },
     { ...state, eTickets }

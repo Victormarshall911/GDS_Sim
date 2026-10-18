@@ -304,11 +304,11 @@ export class SqliteDataStore implements DataStore {
     return fare ?? null;
   }
 
-  logCommand(sessionId: string, input: string, output: string): void {
+  logCommand(sessionId: string, input: string, output: string, dialect: string = 'sabre'): void {
     try {
       this.db
-        .prepare('INSERT INTO command_log (session_id, input, output) VALUES (?, ?, ?)')
-        .run(sessionId, input, output);
+        .prepare('INSERT INTO command_log (session_id, dialect, input, output) VALUES (?, ?, ?, ?)')
+        .run(sessionId, dialect, input, output);
     } catch {
       // Ignore logging failures so commands still execute smoothly
     }
@@ -506,8 +506,8 @@ export class SqliteDataStore implements DataStore {
     try {
       this.db
         .prepare(
-          `INSERT INTO e_tickets (ticket_number, pnr_locator, pax_name, airline_code, total_amount, status)
-           VALUES (?, ?, ?, ?, ?, ?)`
+          `INSERT INTO e_tickets (ticket_number, pnr_locator, pax_name, airline_code, total_amount, status, issued_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           ticket.ticket_number,
@@ -515,7 +515,8 @@ export class SqliteDataStore implements DataStore {
           ticket.pax_name,
           ticket.airline_code,
           ticket.total_amount,
-          ticket.status
+          ticket.status,
+          ticket.issued_at
         );
     } catch {
       // Ignore ticket save error

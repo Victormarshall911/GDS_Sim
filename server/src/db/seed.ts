@@ -1,5 +1,6 @@
 import { getDatabase } from './connection';
 import type { Database as DatabaseType } from 'better-sqlite3';
+import { AIRLINE_TICKET_PREFIXES } from '../command-engine/command-config';
 
 export function seedDatabase(targetDb?: DatabaseType | string): void {
   const db =
@@ -114,33 +115,9 @@ export function seedDatabase(targetDb?: DatabaseType | string): void {
       insertAirport.run(code, name, city, city_code, country, timezone);
     }
 
-    // 3. Airlines (20)
-    const airlines = [
-      ['W3', 'Arik Air', '725'],
-      ['P4', 'Air Peace', '810'],
-      ['QI', 'Ibom Air', '820'],
-      ['OF', 'Overland Airways', '830'],
-      ['UN', 'United Nigeria Airlines', '840'],
-      ['VM', 'Max Air', '850'],
-      ['AW', 'Africa World Airlines', '394'],
-      ['9J', 'Dana Air', '086'],
-      ['AI', 'Air India', '098'],
-      ['BA', 'British Airways', '125'],
-      ['VS', 'Virgin Atlantic', '932'],
-      ['EK', 'Emirates', '176'],
-      ['QR', 'Qatar Airways', '157'],
-      ['DL', 'Delta Air Lines', '006'],
-      ['AF', 'Air France', '057'],
-      ['LH', 'Lufthansa', '220'],
-      ['ET', 'Ethiopian Airlines', '071'],
-      ['KQ', 'Kenya Airways', '706'],
-      ['TK', 'Turkish Airlines', '235'],
-      ['MS', 'EgyptAir', '077'],
-      ['RW', 'RwandAir', '459'],
-    ];
-
-    for (const [code, name, num] of airlines) {
-      insertAirline.run(code, name, num);
+    // 3. Airlines (read from AIRLINE_TICKET_PREFIXES as single source of truth)
+    for (const prefix of Object.values(AIRLINE_TICKET_PREFIXES)) {
+      insertAirline.run(prefix.code, prefix.name, prefix.numeric);
     }
 
     // 4. Flights

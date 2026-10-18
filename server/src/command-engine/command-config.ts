@@ -355,6 +355,8 @@ export const AIRLINE_TICKET_PREFIXES: Record<string, AirlineTicketPrefix> = {
   ET: { code: 'ET', name: 'Ethiopian Airlines', numeric: '071', status: 'VERIFY' },
   KQ: { code: 'KQ', name: 'Kenya Airways', numeric: '706', status: 'VERIFY' },
   TK: { code: 'TK', name: 'Turkish Airlines', numeric: '235', status: 'VERIFY' },
+  MS: { code: 'MS', name: 'EgyptAir', numeric: '077', status: 'VERIFY' },
+  RW: { code: 'RW', name: 'RwandAir', numeric: '459', status: 'VERIFY' },
 };
 
 export const AMADEUS_COMMANDS = {

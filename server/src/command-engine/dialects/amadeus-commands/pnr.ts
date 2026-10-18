@@ -8,12 +8,10 @@ import { AMADEUS_CONFIG } from '../../command-config';
 export function formatAmadeusPnr(
   pnr: {
     record_locator?: string;
-    recordLocator?: string;
     passengers: (PassengerEntry | SavedPnrRecord['passengers'][number])[];
     segments: any[];
     phone?: string | null;
     ticketing?: string | null;
-    receivedFrom?: string | null;
     received_from?: string | null;
     elements?: PnrElementRecord[];
   },
@@ -109,14 +107,16 @@ export function formatAmadeusPnr(
   // 6. E-Tickets (FA lines)
   const eTickets = state?.eTickets || [];
   eTickets.forEach((t) => {
-    lines.push(`  ${elementNum} FA PAX ${t.ticket_number}/ET${t.validating_carrier || t.airline_code || 'P4'}/${todayGds}/${officeId}`);
+    if (!t.airline_code) {
+      throw new Error(`E-ticket ${t.ticket_number} missing airline code`);
+    }
+    lines.push(`  ${elementNum} FA PAX ${t.ticket_number}/ET${t.airline_code}/${todayGds}/${officeId}`);
     elementNum++;
   });
 
   // 7. Received From
-  const rf = pnr.receivedFrom || pnr.received_from;
-  if (rf) {
-    lines.push(`  ${elementNum} RF ${rf}`);
+  if (pnr.received_from) {
+    lines.push(`  ${elementNum} RF ${pnr.received_from}`);
     elementNum++;
   }
 
