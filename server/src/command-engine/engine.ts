@@ -47,11 +47,22 @@ export function executeCommand(
   const currentDialectName = state.dialect || 'sabre';
   const dialect = dialects[currentDialectName] ?? dialects.sabre;
 
-  const result = dialect.execute(input, state, store);
+  try {
+    const result = dialect.execute(input, state, store);
 
-  if (sessionId && store.logCommand) {
-    store.logCommand(sessionId, input, result.output, currentDialectName);
+    if (sessionId && store.logCommand) {
+      store.logCommand(sessionId, input, result.output, currentDialectName);
+    }
+
+    return result;
+  } catch (err: any) {
+    const errorMsg = `SYSTEM ERROR: ${err?.message || 'UNABLE TO PROCESS COMMAND'}`;
+    if (sessionId && store.logCommand) {
+      store.logCommand(sessionId, input, errorMsg, currentDialectName);
+    }
+    return {
+      output: errorMsg,
+      newState: state,
+    };
   }
-
-  return result;
 }
