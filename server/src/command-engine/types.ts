@@ -154,6 +154,9 @@ export interface HotelRecord {
   rate_ngn: number;
   currency: string;
   stars: number;
+  star_rating?: number;
+  city?: string;
+  rate_per_night?: number;
 }
 
 export interface CarLocationRecord {
@@ -170,10 +173,13 @@ export interface ETicketRecord {
   ticket_number: string;
   pnr_locator: string;
   pax_name: string;
-  airline_code: string;
-  total_amount: number;
+  airline_code?: string;
+  total_amount?: number;
   status: string;
   issued_at?: string;
+  validating_carrier?: string;
+  total_fare_ngn?: number;
+  issue_date?: string;
 }
 
 // ─── Command Result ───────────────────────────────────────────
@@ -198,6 +204,7 @@ export interface AirlineRecord {
   code: string;
   name: string;
   numeric: string;
+  country?: string;
 }
 
 export interface FlightClassInfo {
@@ -302,7 +309,9 @@ export interface DataStore {
   getQueueItems?(queueNumber: number): QueueItemRecord[];
   removeQueueItem?(id: number): void;
   searchHotels?(cityCode: string): HotelRecord[];
+  getHotels?(cityCode: string): HotelRecord[];
   searchCars?(cityCode: string): CarLocationRecord[];
+  getCarLocations?(cityCode: string): CarLocationRecord[];
   saveETicket?(ticket: ETicketRecord): void;
   getETickets?(pnrLocator: string): ETicketRecord[];
 }

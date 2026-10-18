@@ -1,4 +1,4 @@
-import type { SessionState, CommandResult, DataStore, PassengerEntry, PnrElementRecord, WorkingPnr } from '../../types';
+import type { SessionState, CommandResult, DataStore, PassengerEntry, PnrElementRecord, WorkingPnr, SavedPnrRecord } from '../../types';
 import { formatDateSabre, formatTimeDisplay } from '../../format';
 import { AMADEUS_CONFIG } from '../../command-config';
 
@@ -8,11 +8,13 @@ import { AMADEUS_CONFIG } from '../../command-config';
 export function formatAmadeusPnr(
   pnr: {
     record_locator?: string;
-    passengers: PassengerEntry[];
+    recordLocator?: string;
+    passengers: (PassengerEntry | SavedPnrRecord['passengers'][number])[];
     segments: any[];
     phone?: string | null;
     ticketing?: string | null;
     receivedFrom?: string | null;
+    received_from?: string | null;
     elements?: PnrElementRecord[];
   },
   state?: SessionState
@@ -107,13 +109,14 @@ export function formatAmadeusPnr(
   // 6. E-Tickets (FA lines)
   const eTickets = state?.eTickets || [];
   eTickets.forEach((t) => {
-    lines.push(`  ${elementNum} FA PAX ${t.ticket_number}/ET${t.validating_carrier}/${todayGds}/${officeId}`);
+    lines.push(`  ${elementNum} FA PAX ${t.ticket_number}/ET${t.validating_carrier || t.airline_code || 'P4'}/${todayGds}/${officeId}`);
     elementNum++;
   });
 
   // 7. Received From
-  if (pnr.receivedFrom || pnr.receivedFrom) {
-    lines.push(`  ${elementNum} RF ${pnr.receivedFrom}`);
+  const rf = pnr.receivedFrom || pnr.received_from;
+  if (rf) {
+    lines.push(`  ${elementNum} RF ${rf}`);
     elementNum++;
   }
 

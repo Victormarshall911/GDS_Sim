@@ -123,7 +123,7 @@ export function handleAmadeusIssueTickets(
           segments: working.segments,
           phone: working.phone,
           ticketing: working.ticketing,
-          receivedFrom: working.receivedFrom,
+          received_from: working.receivedFrom,
           elements: state.pnrElements,
         }
       : state.currentPnr
@@ -133,12 +133,12 @@ export function handleAmadeusIssueTickets(
     if (pnrData) {
       const display = formatAmadeusPnr(
         {
-          record_locator: pnrData.record_locator || pnrData.recordLocator,
+          record_locator: pnrData.record_locator,
           passengers: pnrData.passengers,
           segments: pnrData.segments,
           phone: pnrData.phone,
           ticketing: pnrData.ticketing,
-          receivedFrom: pnrData.received_from || pnrData.receivedFrom,
+          received_from: pnrData.received_from,
           elements: state.pnrElements,
         },
         { ...state, eTickets: allETickets }
