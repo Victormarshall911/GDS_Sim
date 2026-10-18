@@ -1,6 +1,6 @@
 import type { Dialect } from './interface';
 import type { SessionState, CommandResult, DataStore } from '../types';
-import { AMADEUS_CONFIG, AMADEUS_COMMANDS } from '../command-config';
+import { AMADEUS_CONFIG, AMADEUS_COMMANDS, AMADEUS_RETURN_AVAILABILITY_CONFIG } from '../command-config';
 import {
   handleAmadeusSignIn,
   handleAmadeusSignOut,
@@ -21,6 +21,7 @@ import {
 import {
   handleAmadeusAvailability,
   handleAmadeusAvailabilityChange,
+  handleAmadeusAvailabilityReturn,
 } from './amadeus-commands/availability';
 import {
   handleAmadeusSellShort,
@@ -231,6 +232,13 @@ export class AmadeusDialect implements Dialect {
     }
 
     // ─── Availability & Schedules ─────────────────────────────
+    // Return Availability (ACR / AR) - matched BEFORE AC to avoid prefix collision
+    const returnCmdCodes = AMADEUS_RETURN_AVAILABILITY_CONFIG.commands.map((c) => c.code);
+    const returnPattern = new RegExp(`^(?:${returnCmdCodes.join('|')})(?:\\s*(.*))?$`, 'i');
+    if (returnPattern.test(upper)) {
+      return handleAmadeusAvailabilityReturn(input, state, store);
+    }
+
     if (upper.startsWith('AC')) {
       return handleAmadeusAvailabilityChange(upper, state, store);
     }

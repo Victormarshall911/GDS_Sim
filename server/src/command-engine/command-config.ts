@@ -262,6 +262,50 @@ export function parseAvailabilityModifiers(modifierString: string): ParsedAvaila
   return result;
 }
 
+export interface ReturnAvailabilityCommandEntry {
+  code: string;
+  description: string;
+  status: 'CONFIRMED' | 'VERIFY';
+}
+
+export const AMADEUS_RETURN_AVAILABILITY_CONFIG = {
+  commands: [
+    { code: 'ACR', description: 'Availability Change Return', status: 'CONFIRMED' },
+    { code: 'AR', description: 'Availability Return alias', status: 'VERIFY' },
+  ] as ReturnAvailabilityCommandEntry[],
+  carryOverModifiersByDefault: true,
+  defaultDateOption: 'SAME_AS_LAST', // 'SAME_AS_LAST' | 'TODAY'
+  errorNoPriorDisplay: 'NEED AVAILABILITY DISPLAY',
+};
+
+/**
+ * Merge previous and new availability modifier strings.
+ * e.g. prev: "/AP4/CY", new: "/AW3" -> "/AW3/CY"
+ * New modifiers override previous modifiers for the same letter prefix.
+ */
+export function mergeAvailabilityModifiers(
+  prevModStr: string | undefined,
+  newModStr: string | undefined
+): string {
+  if (!newModStr || !newModStr.trim()) return prevModStr || '';
+  if (!prevModStr || !prevModStr.trim()) return newModStr;
+
+  const prevParts = prevModStr.split('/').map((p) => p.trim()).filter(Boolean);
+  const newParts = newModStr.split('/').map((p) => p.trim()).filter(Boolean);
+
+  const map = new Map<string, string>();
+  for (const p of prevParts) {
+    const key = p.charAt(0).toUpperCase();
+    map.set(key, p);
+  }
+  for (const p of newParts) {
+    const key = p.charAt(0).toUpperCase();
+    map.set(key, p);
+  }
+
+  return Array.from(map.values()).map((p) => `/${p}`).join('');
+}
+
 export const AMADEUS_CONFIG = {
   delimiter: '+',
   soldSegmentStatus: 'HK',
@@ -399,6 +443,11 @@ export const AMADEUS_COMMANDS = {
   },
 
   // Flight Availability & Schedules
+  AVAILABILITY_RETURN: {
+    pattern: /^(?:ACR|AR)(?:\s*(.*))?$/i,
+    description: 'Availability return (swap origin and destination)',
+    example: 'ACR20NOV or ACR or AR20NOV',
+  },
   AVAILABILITY_CHANGE: {
     pattern: /^AC(?:\s*(.*))?$/i,
     description: 'Availability change (date, airline, route)',

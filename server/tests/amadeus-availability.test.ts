@@ -169,4 +169,74 @@ describe('Amadeus Availability & Modifier Parser (Section 0)', () => {
       expect(res.newState.lastAvailability?.destination).toBe('ABV');
     });
   });
+
+  describe('Availability Display Commands (AD, AE, AA, SN, TN) & Round Trip', () => {
+    it('AD sorts availability display by departure time ascending', () => {
+      const state = createInitialSessionState('amadeus');
+      const res = executeCommand(state, 'AD19OCTLOSABV', store);
+
+      expect(res.output).toContain('AD  19OCT LOS-ABV');
+      const lines = res.newState.lastAvailability?.lines || [];
+      expect(lines.length).toBeGreaterThan(1);
+      for (let i = 0; i < lines.length - 1; i++) {
+        expect(lines[i].departureTime.localeCompare(lines[i + 1].departureTime)).toBeLessThanOrEqual(0);
+      }
+    });
+
+    it('AE sorts availability display by elapsed flight time ascending', () => {
+      const state = createInitialSessionState('amadeus');
+      const res = executeCommand(state, 'AE19OCTLOSABV', store);
+
+      expect(res.output).toContain('AE  19OCT LOS-ABV');
+      const lines = res.newState.lastAvailability?.lines || [];
+      expect(lines.length).toBeGreaterThan(1);
+      // Line 1 should be the fastest flight (QI 301, 70m = 01H10M)
+      expect(lines[0].airlineCode).toBe('QI');
+      expect(lines[0].elapsedTime).toBe('01H10M');
+    });
+
+    it('AA sorts availability display by arrival time ascending', () => {
+      const state = createInitialSessionState('amadeus');
+      const res = executeCommand(state, 'AA19OCTLOSABV', store);
+
+      expect(res.output).toContain('AA  19OCT LOS-ABV');
+      const lines = res.newState.lastAvailability?.lines || [];
+      expect(lines.length).toBeGreaterThan(1);
+      for (let i = 0; i < lines.length - 1; i++) {
+        expect(lines[i].arrivalTime.localeCompare(lines[i + 1].arrivalTime)).toBeLessThanOrEqual(0);
+      }
+    });
+
+    it('SN returns schedule display with SN header', () => {
+      const state = createInitialSessionState('amadeus');
+      const res = executeCommand(state, 'SN19OCTLOSABV', store);
+
+      expect(res.output).toContain('SN  19OCT LOS-ABV');
+      expect(res.newState.lastAvailability?.lines.length).toBeGreaterThan(0);
+    });
+
+    it('TN returns timetable display with TN header', () => {
+      const state = createInitialSessionState('amadeus');
+      const res = executeCommand(state, 'TN19OCTLOSABV', store);
+
+      expect(res.output).toContain('TN  19OCT LOS-ABV');
+      expect(res.newState.lastAvailability?.lines.length).toBeGreaterThan(0);
+    });
+
+    it('round trip AN19OCTLOSABV*25OCT displays both outbound and return availability with sequential line numbers', () => {
+      const state = createInitialSessionState('amadeus');
+      const res = executeCommand(state, 'AN19OCTLOSABV*25OCT', store);
+
+      expect(res.output).toContain('AN  19OCT LOS-ABV');
+      expect(res.output).toContain('RETURN AVAILABILITY: 25OCT ABV-LOS');
+      const lines = res.newState.lastAvailability?.lines || [];
+      expect(lines.length).toBe(18); // 9 outbound + 9 return flights
+      expect(lines[0].origin).toBe('LOS');
+      expect(lines[0].destination).toBe('ABV');
+      expect(lines[9].origin).toBe('ABV');
+      expect(lines[9].destination).toBe('LOS');
+      expect(lines[9].lineNumber).toBe(10);
+    });
+  });
 });
+

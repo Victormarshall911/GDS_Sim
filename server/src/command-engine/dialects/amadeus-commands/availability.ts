@@ -1,6 +1,10 @@
 import type { SessionState, CommandResult, DataStore, AvailabilityLine } from '../../types';
 import { parseGdsDate, formatDateSabre, padRight, padLeft, formatTimeDisplay } from '../../format';
-import { parseAvailabilityModifiers } from '../../command-config';
+import {
+  parseAvailabilityModifiers,
+  mergeAvailabilityModifiers,
+  AMADEUS_RETURN_AVAILABILITY_CONFIG,
+} from '../../command-config';
 
 export interface AmadeusAvailQuery {
   cmdType: 'AN' | 'AD' | 'AE' | 'AA' | 'SN' | 'TN';
@@ -10,6 +14,28 @@ export interface AmadeusAvailQuery {
   returnDateStr?: string;
   modifiersStr?: string;
   timeStr?: string;
+}
+
+/**
+ * Calculate flight duration in minutes
+ */
+export function getFlightDurationMinutes(depTime: string, arrTime: string): number {
+  const [depH, depM] = depTime.split(':').map(Number);
+  const [arrH, arrM] = arrTime.split(':').map(Number);
+  let diff = arrH * 60 + arrM - (depH * 60 + depM);
+  if (diff < 0) {
+    diff += 24 * 60; // Next-day arrival
+  }
+  return diff;
+}
+
+/**
+ * Format minutes into "01H15M" format
+ */
+export function formatDurationString(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h.toString().padStart(2, '0')}H${m.toString().padStart(2, '0')}M`;
 }
 
 /**
@@ -125,11 +151,11 @@ export function handleAmadeusAvailabilityChange(
   let newDate = current.date;
   let newOrigin = current.origin;
   let newDest = current.destination;
-  let newModifiers = '';
+  let newModifiers = current.modifiersStr || '';
 
   if (changeArg.startsWith('/')) {
     // Modifier change: e.g. AC/AP4
-    newModifiers = changeArg;
+    newModifiers = mergeAvailabilityModifiers(current.modifiersStr, changeArg);
   } else if (/^\d{1,2}[A-Z]{3}(?:\d{2})?$/.test(changeArg)) {
     // Date change: e.g. AC20MAR
     const parsedD = parseGdsDate(changeArg);
@@ -154,12 +180,73 @@ export function handleAmadeusAvailabilityChange(
   return handleAmadeusAvailability(newCmd, state, store);
 }
 
+/**
+ * Handle ACR / AR (Availability Change Return)
+ * Swaps origin and destination, uses new date (or last date if none given),
+ * carries modifiers over using mergeAvailabilityModifiers (new modifiers override),
+ * and makes the result the new lastAvailability.
+ */
+export function handleAmadeusAvailabilityReturn(
+  rawInput: string,
+  state: SessionState,
+  store: DataStore
+): CommandResult {
+  if (!state.lastAvailability) {
+    return {
+      output: AMADEUS_RETURN_AVAILABILITY_CONFIG.errorNoPriorDisplay,
+      newState: state,
+    };
+  }
+
+  const clean = rawInput.trim();
+  const arg = clean.replace(/^(?:ACR|AR)\s*/i, '').trim().toUpperCase();
+  const current = state.lastAvailability;
+
+  // Swap origin and destination
+  const newOrigin = current.destination;
+  const newDest = current.origin;
+
+  let datePart = arg;
+  let modPart = '';
+
+  const slashIdx = arg.indexOf('/');
+  if (slashIdx !== -1) {
+    datePart = arg.substring(0, slashIdx).trim();
+    modPart = arg.substring(slashIdx).trim();
+  }
+
+  // Determine new travel date: new date if provided, otherwise keep last date
+  let newDate = current.date;
+  if (datePart) {
+    const parsedD = parseGdsDate(datePart);
+    if (parsedD) {
+      newDate = parsedD.toISOString().slice(0, 10);
+    }
+  }
+
+  // Merge modifiers: new overrides previous
+  const finalModifiers = mergeAvailabilityModifiers(current.modifiersStr, modPart);
+
+  const [y, m, d] = newDate.split('-').map(Number);
+  const gdsDateStr = formatDateSabre(new Date(Date.UTC(y, m - 1, d)));
+  const newCmd = `AN${gdsDateStr}${newOrigin}${newDest}${finalModifiers}`;
+
+  return handleAmadeusAvailability(newCmd, state, store);
+}
+
 export function handleAmadeusAvailability(
   rawInput: string,
   state: SessionState,
   store: DataStore
 ): CommandResult {
-  if (rawInput.trim().toUpperCase().startsWith('AC')) {
+  const upper = rawInput.trim().toUpperCase();
+  const returnCmdCodes = AMADEUS_RETURN_AVAILABILITY_CONFIG.commands.map((c) => c.code);
+  const returnPattern = new RegExp(`^(?:${returnCmdCodes.join('|')})(?:\\s*(.*))?$`, 'i');
+  if (returnPattern.test(upper)) {
+    return handleAmadeusAvailabilityReturn(rawInput, state, store);
+  }
+
+  if (upper.startsWith('AC')) {
     return handleAmadeusAvailabilityChange(rawInput, state, store);
   }
 
@@ -207,16 +294,29 @@ export function handleAmadeusAvailability(
     );
   }
 
-  // Sort by command type
+  // Sort by command type:
+  // AD: sort by departure time ascending
+  // AA: sort by arrival time ascending
+  // AE: sort by elapsed flight time ascending
+  // SN/TN/AN: standard departure time sort
   if (parsed.cmdType === 'AD') {
     flights.sort((a, b) => a.departure_time.localeCompare(b.departure_time));
   } else if (parsed.cmdType === 'AA') {
     flights.sort((a, b) => a.arrival_time.localeCompare(b.arrival_time));
+  } else if (parsed.cmdType === 'AE') {
+    flights.sort((a, b) => {
+      const durA = getFlightDurationMinutes(a.departure_time, a.arrival_time);
+      const durB = getFlightDurationMinutes(b.departure_time, b.arrival_time);
+      if (durA !== durB) return durA - durB;
+      return a.departure_time.localeCompare(b.departure_time);
+    });
+  } else if (parsed.cmdType === 'SN' || parsed.cmdType === 'TN') {
+    flights.sort((a, b) => a.departure_time.localeCompare(b.departure_time));
   }
 
   const formattedDate = formatDateSabre(travelDateObj);
   const timeDisplay = parsed.timeStr || '0000';
-  const header = `${parsed.cmdType}  ${formattedDate}  ${parsed.origin}${parsed.destination}  ${timeDisplay}`;
+  const header = `${parsed.cmdType}  ${formattedDate} ${parsed.origin}-${parsed.destination}  ${timeDisplay}`;
 
   if (flights.length === 0) {
     const filterNote = modOpts.airlines?.length
@@ -252,6 +352,9 @@ export function handleAmadeusAvailability(
     const arrTime = formatTimeDisplay(f.arrival_time);
     const ac = padRight(f.aircraft, 4);
 
+    const durationMinutes = getFlightDurationMinutes(f.departure_time, f.arrival_time);
+    const elapsedTimeStr = formatDurationString(durationMinutes);
+
     // Amadeus style line: " 1   P4 7120  J4 C4 D2 Y9 B9 M7 H7 K4  LOSABV  0830 0945  0  738   E"
     const lineOutput = ` ${padRight(lineNum.toString(), 2)}  ${airline} ${flightNumberStr}  ${padRight(classStr, 25)}  ${cityPair}  ${depTime} ${arrTime}  0  ${ac}  E`;
     outputLines.push(lineOutput);
@@ -266,7 +369,7 @@ export function handleAmadeusAvailability(
       arrivalTime: f.arrival_time,
       aircraft: f.aircraft,
       classes: f.classes,
-      elapsedTime: '01H15M',
+      elapsedTime: elapsedTimeStr,
       stops: 0,
       travelDate: isoDate,
       flightId: f.id,
@@ -289,6 +392,8 @@ export function handleAmadeusAvailability(
       returnFlights.forEach((rf, rIdx) => {
         const rLineNum = lines.length + 1;
         const rClassStr = rf.classes.map((c) => `${c.code}${c.seats}`).join(' ');
+        const rDurationMinutes = getFlightDurationMinutes(rf.departure_time, rf.arrival_time);
+        const rElapsedStr = formatDurationString(rDurationMinutes);
         outputLines.push(` ${padRight(rLineNum.toString(), 2)}  ${rf.airline_code} ${rf.flight_number}  ${padRight(rClassStr, 25)}  ${rf.origin}${rf.destination}  ${formatTimeDisplay(rf.departure_time)} ${formatTimeDisplay(rf.arrival_time)}  0  ${rf.aircraft}  E`);
         lines.push({
           lineNumber: rLineNum,
@@ -300,7 +405,7 @@ export function handleAmadeusAvailability(
           arrivalTime: rf.arrival_time,
           aircraft: rf.aircraft,
           classes: rf.classes,
-          elapsedTime: '01H15M',
+          elapsedTime: rElapsedStr,
           stops: 0,
           travelDate: returnIso,
           flightId: rf.id,
@@ -320,6 +425,7 @@ export function handleAmadeusAvailability(
         destination: parsed.destination,
         date: isoDate,
         lines,
+        modifiersStr: parsed.modifiersStr || '',
       },
       availabilityPage: 0,
     },
